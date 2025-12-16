@@ -1,0 +1,25 @@
+[project]
+name = "rocket-landing-rl"
+version = "0.1.0"
+description = "Self-landing rocket reinforcement learning environment with RLlib and pygame"
+readme = "README.md"
+requires-python = ">=3.9"
+
+dependencies = [
+    "gymnasium>=0.29",
+    "numpy>=1.23",
+    "pygame>=2.5",
+    "ray[rllib]>=2.9",
+    "torch>=2.0",
+    "pandas>=2.0",
+    "matplotlib>=3.7",
+    "imageio>=2.31",
+    "pandas>=2.0"
+]
+
+[tool.poetry]
+package-mode = false
+
+[build-system]
+requires = ["setuptools>=65"]
+build-backend = "setuptools.build_meta"
