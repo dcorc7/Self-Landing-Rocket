@@ -108,7 +108,7 @@ The project also includes custom-built RL agents for learning purposes:
 
 ---
 
-## 🎮 Environment Details
+## Environment Details
 
 ### State Space (Continuous)
 
@@ -205,8 +205,8 @@ Self-Landing-Rocket/
 │   │   └── rocket_env.py              # Gymnasium environment implementation
 │   │
 │   ├── agents/
-│   │   ├── dqn_agent.py               # Custom DQN implementation (educational)
-│   │   └── ppo_agent.py               # Custom PPO implementation (educational)
+│   │   ├── dqn_agent.py               # Custom DQN implementation
+│   │   └── ppo_agent.py               # Custom PPO implementation 
 │   │
 │   └── training/
 │       ├── train_rllib_dqn.py         # RLlib DQN training 
@@ -229,7 +229,7 @@ Self-Landing-Rocket/
 
 ---
 
-## 🛠️ Installation
+## Installation
 
 ### Prerequisites
 
@@ -313,7 +313,7 @@ poetry run python -m rocket_landing.training.train_rllib_ppo
 - Best policy: `./policies/rllib_ppo_best/`
 - Training plots: `./training_plots/ppo_training_curves.png`
 
-### Option 2: Custom Implementations (Educational)
+### Option 2: Custom Implementations
 
 #### Train Custom DQN
 
@@ -514,6 +514,41 @@ poetry run python -m rocket_landing.utils.rollout --policy rllib_ppo_best --epis
 
 Saves animated GIFs to `./gifs/`
 
+### Real-Time Training Monitoring with TensorBoard
+
+RLlib automatically logs training metrics to TensorBoard format. You can monitor training progress in real-time or review completed experiments.
+
+**Launch TensorBoard**
+
+```bash 
+# From project root directory
+poetry run tensorboard --logdir ray_results/
+```
+
+Then open your browser and navigate to:
+
+```
+http://localhost:6006
+```
+
+**What You'll See**
+
+TensorBoard provides rich visualizations of your training run:
+
+**Scalars Tab** (most important):
+
+- `episode_reward_mean:` Average reward per episode (main success metric)
+- `episode_len_mean:` Average episode length in timesteps
+- `num_env_steps_sampled_lifetime:` Total environment interactions
+- `num_episodes_lifetime:` Total episodes completed
+- `Loss metrics:` DQN loss, TD error, Q-values
+
+**Distributions Tab:**
+
+- Q-value distributions over time
+- Action selection frequencies
+- Reward distributions
+
 ---
 
 ## Acknowledgments
@@ -521,20 +556,5 @@ Saves animated GIFs to `./gifs/`
 - **OpenAI Gymnasium**: Standard RL environment API
 - **Ray RLlib**: Scalable RL framework
 - **PyGame**: Visualization and rendering
-- Inspired by **SpaceX Falcon 9** autonomous landing systems
-
----
-
-## 📚 Additional Resources
-
-**Learn More About RL:**
-- [Sutton & Barto - Reinforcement Learning: An Introduction](http://incompleteideas.net/book/the-book.html)
-- [OpenAI Spinning Up](https://spinningup.openai.com/)
-- [Deep RL Course by Hugging Face](https://huggingface.co/deep-rl-course/unit0/introduction)
-
-**Ray RLlib Documentation:**
-- [RLlib Overview](https://docs.ray.io/en/latest/rllib/index.html)
-- [DQN Documentation](https://docs.ray.io/en/latest/rllib/rllib-algorithms.html#dqn)
-- [PPO Documentation](https://docs.ray.io/en/latest/rllib/rllib-algorithms.html#ppo)
 
 ---

@@ -40,20 +40,23 @@ def main():
             env_config = {"render_mode": None},
         )
         .framework("torch")
-        .env_runners(num_env_runners = 0)
+        .debugging(log_level = "INFO")
+        .env_runners(
+            num_env_runners = 2,
+            num_envs_per_env_runner = 2
+        )
         .training(
             gamma = 0.99,
             lr = 1e-3,
-            train_batch_size = 4000,
-            replay_buffer_config = {"capacity": 200000},
-            target_network_update_freq = 1000,
+            train_batch_size = 2000,
+            replay_buffer_config = {"capacity": 50000},
+            target_network_update_freq = 500,
             dueling = True,
             double_q = True,
         )
     )
 
     ray.init(
-        local_mode = True,
         ignore_reinit_error = True,
         include_dashboard = False,
         logging_level = "ERROR"
@@ -66,9 +69,9 @@ def main():
     tuner = tune.Tuner(
         "DQN",
         run_config = RunConfig(
-            stop = {"training_iteration": 20},
+            stop = {"training_iteration": 30},
             checkpoint_config = CheckpointConfig(
-                checkpoint_frequency = 10,
+                checkpoint_frequency = 5,
                 checkpoint_at_end = True
             ),
             storage_path = storage_uri,
@@ -79,26 +82,22 @@ def main():
 
     results = tuner.fit()
 
-    for result in results:
-        print(
-            result.metrics["training_iteration"],
-            result.metrics["episode_reward_mean"]
-        )
+
 
     # ---------------------------
     # ----- EXTRACT METRICS -----
     # ---------------------------
-
     metrics = []
 
     for result in results:
         metrics.append({
-            "iteration": result.metrics["training_iteration"],
-            "episode_reward_mean": result.metrics["episode_reward_mean"],
-            "episode_len_mean": result.metrics["episode_len_mean"],
+            "iteration": result.metrics.get("training_iteration"),
+            "episode_return_mean": result.metrics.get("episode_return_mean"),
+            "episode_len_mean": result.metrics.get("episode_len_mean"),
         })
 
     df = pd.DataFrame(metrics)
+    df = df.dropna()
 
     # Ensure output directory exists
     os.makedirs("./training_plots", exist_ok = True)
@@ -110,8 +109,8 @@ def main():
     fig, axes = plt.subplots(1, 2, figsize = (14, 5))
 
     # Reward plot
-    axes[0].plot(df["iteration"], df["episode_reward_mean"])
-    axes[0].set_title("Mean Episode Reward")
+    axes[0].plot(df["iteration"], df["episode_return_mean"])
+    axes[0].set_title("Mean Episode Return")
     axes[0].set_xlabel("Training Iteration")
     axes[0].set_ylabel("Reward")
 
@@ -121,13 +120,16 @@ def main():
     axes[1].set_xlabel("Training Iteration")
     axes[1].set_ylabel("Timesteps")
 
+    PLOTS_DIR = Path(__file__).resolve().parent / "training_plots"
+    PLOTS_DIR.mkdir(parents = True, exist_ok = True)
+
     plt.tight_layout()
-    plt.savefig("./training_plots/dqn_training_curves.png", dpi = 150)
+    plt.savefig(PLOTS_DIR / "dqn_training_curves.png", dpi = 150)
     plt.close()
 
     # Print the best checkpoint path
     best_result = results.get_best_result(
-        metric = "env_runners/episode_reward_mean",
+        metric = "env_runners/episode_return_mean",
         mode = "max"
     )
 
