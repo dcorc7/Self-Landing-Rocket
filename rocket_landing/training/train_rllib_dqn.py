@@ -69,7 +69,10 @@ def main():
     tuner = tune.Tuner(
         "DQN",
         run_config = RunConfig(
-            stop = {"training_iteration": 30},
+            stop = {
+                "training_iteration": 2,
+                "env_runners/episode_return_mean": 100
+            },
             checkpoint_config = CheckpointConfig(
                 checkpoint_frequency = 5,
                 checkpoint_at_end = True
@@ -87,17 +90,19 @@ def main():
     # ---------------------------
     # ----- EXTRACT METRICS -----
     # ---------------------------
-    metrics = []
-
+    dfs = []
     for result in results:
-        metrics.append({
-            "iteration": result.metrics.get("training_iteration"),
-            "episode_return_mean": result.metrics.get("episode_return_mean"),
-            "episode_len_mean": result.metrics.get("episode_len_mean"),
-        })
+        df = result.metrics_dataframe
+        if df is not None:
+            dfs.append(df[["training_iteration", "env_runners/episode_return_mean", "env_runners/episode_len_mean"]])
 
-    df = pd.DataFrame(metrics)
-    df = df.dropna()
+
+    df = pd.concat(dfs).dropna()
+    df = df.rename(columns={
+        "training_iteration": "iteration",
+        "env_runners/episode_return_mean": "episode_return_mean",
+        "env_runners/episode_len_mean": "episode_len_mean"
+    })
 
     # Ensure output directory exists
     os.makedirs("./training_plots", exist_ok = True)

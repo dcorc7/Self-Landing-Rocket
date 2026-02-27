@@ -36,12 +36,27 @@ def load_policy(policy_path):
 
         def policy_fn(observation):
             obs_batch = np.expand_dims(observation, axis = 0)
-
+        
             outputs = module.forward_inference(
-                {"obs": torch.tensor(obs_batch, dtype = torch.float32)}
+                {"obs": torch.tensor(obs_batch, dtype=torch.float32)}
             )
 
-            action = outputs["actions"].cpu().numpy()[0]
+            # PPO returns logits, DQN returns Q-values — different keys
+            if "action_dist_inputs" in outputs:
+                # For PPO
+                logits = outputs["action_dist_inputs"]  
+            else:
+                # For DQN
+                logits = outputs["actions"]             
+
+            action = torch.argmax(logits, dim=-1).cpu().numpy()
+
+            # Handle both scalar (DQN) and batched (PPO) outputs
+            if action.ndim == 0:
+                return int(action.item())
+            else:
+                return int(action[0])
+
             return int(action)
 
         return policy_fn

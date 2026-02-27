@@ -12,6 +12,8 @@ from rocket_landing.environment.rocket_env import RocketEnv
 
 USE_RANDOM_POLICY = False
 policy = "policies/rllib_dqn_best"
+#policy = "policies/rllib_ppo_best"
+
 
 
 # ---------------------------------
@@ -89,7 +91,7 @@ while True:
 env.close()
 
 # Print episodes rewards
-print("Episode return: {G}")
+print(f"Single Episode Return: {G}")
 
 # ---------------------------------
 # ----- SAVE GIF ------------------

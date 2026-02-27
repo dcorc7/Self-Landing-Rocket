@@ -37,15 +37,19 @@ class RocketEnv(gym.Env):
         # -----------------------------
         # ----- OBSERVATION SPACE -----
         # -----------------------------
-        # [x, y, vx, vy, angle, angular_velocity]
+        # [x, y, vx, vy, angle, angular_velocity, fuel]
 
 
+        # Upper bound of observation space
         high = np.array(
             [1.0, 1.2, 2.0, 2.0, math.pi, 2.0, 1.0],
             dtype = np.float32
         )
 
+        # Lower bound of observation space
         low = -high
+
+        # Fuel can't be negative
         low[6] = 0.0
 
         self.observation_space = spaces.Box(
@@ -72,11 +76,11 @@ class RocketEnv(gym.Env):
 
         self.last_action = 0
 
-        # Return all varaibles back to a common rest state
+        # Return all variables back to a common rest state
         self.state = np.array(
             [
-                np.random.uniform(-0.1, 0.1),       # x
-                1.0,                                # y
+                np.random.uniform(-0.1, 0.1),       # x (normalized and converted to screen size later)
+                1.0,                                # y (normalized and converted to screen size later)
                 0.0,                                # vx
                 0.0,                                # vy
                 np.random.uniform(-0.05, 0.05),     # angle
@@ -99,31 +103,43 @@ class RocketEnv(gym.Env):
     # ----------------
 
     def step(self, action):
+        # Set current state
         x, y, vx, vy, angle, ang_vel, fuel = self.state
         dt = 0.05
+
+        # Initialize previous action
         self.last_action = action
 
+        # Side thrust if action is 1 or 3
         if action == 1:
             ang_vel += self.angular_thrust
         elif action == 3:
             ang_vel -= self.angular_thrust
 
+        # Main thrust is action is 2
         if action == 2 and fuel > 0.0:
             vx += math.sin(angle) * self.main_thrust
             vy +=  math.cos(angle) * self.main_thrust
             fuel -= 0.01
 
+        # Set fuel to either 0 or current fuel amount
         fuel = max(0.0, fuel)
 
+        # Add gravity to rocket
         vy += self.gravity
+
+        # Add angular velocity to rocket
         ang_vel *= 0.99
 
+        # Update rocket location
         x += vx * dt
         y += vy * dt
 
+        # Update rocket angle
         angle += ang_vel * dt
         angle = (angle + math.pi) % (2 * math.pi) - math.pi
 
+        # Apply reward based on current rocket data
         reward = 0.0
         reward -= 0.1 * abs(angle)
         reward -= 0.3 * (abs(vx) + abs(vy))
@@ -131,12 +147,15 @@ class RocketEnv(gym.Env):
         reward -= 0.05 * abs(ang_vel)
         reward -= 0.1 * (1.0 - fuel)
 
+        # Set rocket status is not terminated
         terminated = False
 
+        # Rocket is terminated if it is off screen horixontally
         if abs(x) > self.x_limit:
             terminated = True
             reward -= 50.0
 
+        # Rocket is terminated if it is off screen vertically
         if y <= 0.0:
             terminated = True
             y = 0.0
@@ -198,10 +217,10 @@ class RocketEnv(gym.Env):
         # Initialize x, y, and rocket agnle variable from the state
         x, y, _, _, angle, _, fuel = self.state
 
-        # Set
+        # Set x coordinate according to screen width
         px = int(self.screen_width / 2 + x * self.scale)
 
-        # Set 
+        # Set y coordinate according to screen height
         py = int(self.screen_height - (y * self.scale) - 10)
 
         # Draw the rocket
