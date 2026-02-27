@@ -6,3 +6,5 @@ __pycache__/
 .vscode/
 .DS_Store
 *.egg-info/
+
+./ray_results/*
