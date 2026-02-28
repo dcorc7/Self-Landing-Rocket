@@ -19,15 +19,15 @@ class RocketEnv(gym.Env):
         self.side_thrust = 0.05
         self.angular_thrust = 0.05
 
-        self.max_x = 1.0
-        self.max_y = 1.2
+        self.max_x = 1.5
+        self.max_y = 1.95
 
-        self.x_limit = 1
+        self.x_limit = 1.5
 
         # ------------------------
         # ----- ACTION SPACE -----
         # ------------------------
-        # 0: no-op
+        # 0: no action
         # 1: rotate left
         # 2: main engine
         # 3: rotate right
@@ -42,7 +42,7 @@ class RocketEnv(gym.Env):
 
         # Upper bound of observation space
         high = np.array(
-            [1.0, 1.2, 2.0, 2.0, math.pi, 2.0, 1.0],
+            [1.5, 1.95, 2.0, 2.0, math.pi, 2.0, 1.0],
             dtype = np.float32
         )
 
@@ -76,14 +76,13 @@ class RocketEnv(gym.Env):
 
         self.last_action = 0
 
-        # Return all variables back to a common rest state
         self.state = np.array(
             [
-                np.random.uniform(-0.1, 0.1),       # x (normalized and converted to screen size later)
-                1.0,                                # y (normalized and converted to screen size later)
+                np.random.uniform(-0.5, 0.5),       # x (normalized and converted to screen size later)
+                np.random.uniform(0.8, 1.2),        # y (normalized and converted to screen size later)
                 0.0,                                # vx
                 0.0,                                # vy
-                np.random.uniform(-0.05, 0.05),     # angle
+                np.random.uniform(-0.3, 0.3),       # angle — wider angle range
                 0.0,                                # angular_velocity
                 1.0                                 # fuel
             ],
@@ -145,7 +144,8 @@ class RocketEnv(gym.Env):
         reward -= 0.3 * (abs(vx) + abs(vy))
         reward -= 0.2 * abs(x)
         reward -= 0.05 * abs(ang_vel)
-        reward -= 0.1 * (1.0 - fuel)
+        #reward -= 0.1 * (1.0 - fuel) 
+        reward += 0.1 * (1.0 - y)
 
         # Set rocket status is not terminated
         terminated = False
@@ -155,7 +155,7 @@ class RocketEnv(gym.Env):
             terminated = True
             reward -= 50.0
 
-        # Rocket is terminated if it is off screen vertically
+        # Rewards for landing and near landings
         if y <= 0.0:
             terminated = True
             y = 0.0
@@ -167,10 +167,22 @@ class RocketEnv(gym.Env):
                 and abs(angle) < 0.1
             )
 
-            reward += 100.0 if soft_landing else -100.0
+            near_landing = (
+                abs(x) < 0.3
+                and abs(vx) < 0.3
+                and abs(vy) < 0.4
+                and abs(angle) < 0.3
+            )
+
+            if soft_landing:
+                reward += 200.0
+            elif near_landing:
+                reward += 100.0   # partial credit for close attempts
+            else:
+                reward -= 100.0
 
         if not terminated:
-            reward -= 0.05
+            reward -= 0.2
 
         self.state = np.array([x, y, vx, vy, angle, ang_vel, fuel], dtype = np.float32)
 
@@ -220,8 +232,8 @@ class RocketEnv(gym.Env):
         # Set x coordinate according to screen width
         px = int(self.screen_width / 2 + x * self.scale)
 
-        # Set y coordinate according to screen height
-        py = int(self.screen_height - (y * self.scale) - 10)
+        # Set y coordinate according to screen height and rocket height
+        py = int(self.screen_height - (y * self.scale) - 10 - 25)
 
         # Draw the rocket
         rocket = pygame.Surface((20, 50), pygame.SRCALPHA)

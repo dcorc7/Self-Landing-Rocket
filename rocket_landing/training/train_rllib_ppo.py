@@ -42,8 +42,8 @@ def main():
         .framework("torch")
         .debugging(log_level = "INFO")
         .env_runners(
-            num_env_runners = 2,
-            num_envs_per_env_runner = 2
+            num_env_runners = 4,
+            num_envs_per_env_runner = 4
         )
         .training(
             gamma = 0.99,
@@ -71,11 +71,11 @@ def main():
         "PPO",
         run_config = RunConfig(
             stop = {
-                "training_iteration": 100,
-                "env_runners/episode_return_mean": 75
+                "training_iteration": 200,
+                "env_runners/episode_return_mean": 100
             },
             checkpoint_config = CheckpointConfig(
-                checkpoint_frequency = 5,
+                checkpoint_frequency = 10,
                 checkpoint_at_end = True
             ),
             storage_path = storage_uri,
@@ -105,9 +105,6 @@ def main():
         "env_runners/episode_return_mean": "episode_return_mean",
         "env_runners/episode_len_mean": "episode_len_mean"
     })
-
-    # Ensure output directory exists
-    os.makedirs("./training_plots", exist_ok = True)
 
     # ------------------------
     # ----- PLOT METRICS -----

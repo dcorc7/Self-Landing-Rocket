@@ -43,21 +43,20 @@ def load_policy(policy_path):
 
             # PPO returns logits, DQN returns Q-values — different keys
             if "action_dist_inputs" in outputs:
-                # For PPO
-                logits = outputs["action_dist_inputs"]  
+                # PPO — argmax over logits
+                logits = outputs["action_dist_inputs"]
+                action = torch.argmax(logits, dim=-1).cpu().numpy()
+                if action.ndim == 0:
+                    return int(action.item())
+                else:
+                    return int(action[0])
             else:
-                # For DQN
-                logits = outputs["actions"]             
-
-            action = torch.argmax(logits, dim=-1).cpu().numpy()
-
-            # Handle both scalar (DQN) and batched (PPO) outputs
-            if action.ndim == 0:
-                return int(action.item())
-            else:
-                return int(action[0])
-
-            return int(action)
+                # DQN — action is already selected
+                action = outputs["actions"]
+                if action.ndim == 0:
+                    return int(action.item())
+                else:
+                    return int(action[0])
 
         return policy_fn
 

@@ -42,8 +42,8 @@ def main():
         .framework("torch")
         .debugging(log_level = "INFO")
         .env_runners(
-            num_env_runners = 2,
-            num_envs_per_env_runner = 2
+            num_env_runners = 4,
+            num_envs_per_env_runner = 4
         )
         .training(
             gamma = 0.99,
@@ -70,7 +70,7 @@ def main():
         "DQN",
         run_config = RunConfig(
             stop = {
-                "training_iteration": 2,
+                "training_iteration": 75,
                 "env_runners/episode_return_mean": 100
             },
             checkpoint_config = CheckpointConfig(
@@ -103,9 +103,6 @@ def main():
         "env_runners/episode_return_mean": "episode_return_mean",
         "env_runners/episode_len_mean": "episode_len_mean"
     })
-
-    # Ensure output directory exists
-    os.makedirs("./training_plots", exist_ok = True)
 
     # ------------------------
     # ----- PLOT METRICS -----

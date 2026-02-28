@@ -1,4 +1,5 @@
 import imageio
+import numpy as np
 from pathlib import Path
 
 from rocket_landing.evaluation.load_policy import load_policy
@@ -11,8 +12,8 @@ from rocket_landing.environment.rocket_env import RocketEnv
 # ---------------------------------
 
 USE_RANDOM_POLICY = False
-policy = "policies/rllib_dqn_best"
-#policy = "policies/rllib_ppo_best"
+#policy = "policies/rllib_dqn_best"
+policy = "policies/rllib_ppo_best"
 
 
 
@@ -22,6 +23,8 @@ policy = "policies/rllib_dqn_best"
 
 # rgb_array so taht the frames can save as a gif
 env = RocketEnv(render_mode = "rgb_array")
+
+
 
 # ---------------------------------
 # ----- POLICY SETUP --------------
@@ -40,12 +43,18 @@ else:
     chosen_policy = load_policy(policy)
 
 
+
 # ---------------------------------
 # ----- INITIAL STATE -------------
 # ---------------------------------
 
-# Set the initial state
-observation, info = env.reset(seed = 42)
+# Set the initial state (random setup according to reset rules)
+observation, info = env.reset()
+
+# Override with custom initial state (Uncomment to have certain setup)
+                     # [x,     y,  vx,  vy, angle, angular_velocity, fuel]
+#env.state = np.array([0.6, 1.0, 0.0, 0.0, -1, 0.0, 1.0], dtype=np.float32)
+#observation = env.state
 
 # initlialize an emtpy list to hold frames
 frames = []
