@@ -1,0 +1,14 @@
+---
+title: Methods
+---
+
+
+---
+
+## Deep Q-Learning Netowrks (DQN)
+
+
+
+---
+
+## Proximal PolicyOptimization (PPO)

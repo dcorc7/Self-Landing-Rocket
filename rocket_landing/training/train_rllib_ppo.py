@@ -72,7 +72,7 @@ def main():
         run_config = RunConfig(
             stop = {
                 "training_iteration": 200,
-                "env_runners/episode_return_mean": 100
+                "env_runners/episode_return_mean": 175
             },
             checkpoint_config = CheckpointConfig(
                 checkpoint_frequency = 10,

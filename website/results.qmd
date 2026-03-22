@@ -1,0 +1,45 @@
+---
+title: Results
+---
+
+## Random Policy
+
+![Random Gif](./gifs/random.gif){width=60%}
+
+
+---
+
+## Deep Q-Learning Networks (DQN)
+
+![DQN Gif](./gifs/rllib_dqn_best.gif){width=60%}
+
+
+---
+
+## Proximal Policy Optimization (PPO)
+
+
+![PPO Gif](./gifs/rllib_ppo_best.gif){width=60%}
+
+
+
+---
+
+# Conclusion & Future Work
+
+
+
+---
+
+## Limitations
+
+
+
+---
+
+## Future Directions
+
+
+
+---
+

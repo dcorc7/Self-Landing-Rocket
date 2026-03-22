@@ -1,0 +1,65 @@
+[
+  {
+    "objectID": "results.html",
+    "href": "results.html",
+    "title": "Results",
+    "section": "",
+    "text": "Random Gif"
+  },
+  {
+    "objectID": "results.html#random-policy",
+    "href": "results.html#random-policy",
+    "title": "Results",
+    "section": "",
+    "text": "Random Gif"
+  },
+  {
+    "objectID": "results.html#deep-q-learning-networks-dqn",
+    "href": "results.html#deep-q-learning-networks-dqn",
+    "title": "Results",
+    "section": "Deep Q-Learning Networks (DQN)",
+    "text": "Deep Q-Learning Networks (DQN)\n\n\n\nDQN Gif"
+  },
+  {
+    "objectID": "results.html#proximal-policy-optimization-ppo",
+    "href": "results.html#proximal-policy-optimization-ppo",
+    "title": "Results",
+    "section": "Proximal Policy Optimization (PPO)",
+    "text": "Proximal Policy Optimization (PPO)\n\n\n\nPPO Gif"
+  },
+  {
+    "objectID": "results.html#limitations",
+    "href": "results.html#limitations",
+    "title": "Results",
+    "section": "Limitations",
+    "text": "Limitations"
+  },
+  {
+    "objectID": "results.html#future-directions",
+    "href": "results.html#future-directions",
+    "title": "Results",
+    "section": "Future Directions",
+    "text": "Future Directions"
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Self Landing Rocket Using Reinforcement Learning",
+    "section": "",
+    "text": "Introduction\n\n\nMotivation\n\n\nGithub Repository\nThe Github repository hosting all code for this project can be found here\n\n\n\n\n Back to top"
+  },
+  {
+    "objectID": "methods.html#deep-q-learning-netowrks-dqn",
+    "href": "methods.html#deep-q-learning-netowrks-dqn",
+    "title": "Methods",
+    "section": "Deep Q-Learning Netowrks (DQN)",
+    "text": "Deep Q-Learning Netowrks (DQN)"
+  },
+  {
+    "objectID": "methods.html#proximal-policyoptimization-ppo",
+    "href": "methods.html#proximal-policyoptimization-ppo",
+    "title": "Methods",
+    "section": "Proximal PolicyOptimization (PPO)",
+    "text": "Proximal PolicyOptimization (PPO)"
+  }
+]

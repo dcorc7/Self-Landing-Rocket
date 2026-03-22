@@ -138,24 +138,46 @@ class RocketEnv(gym.Env):
         angle += ang_vel * dt
         angle = (angle + math.pi) % (2 * math.pi) - math.pi
 
-        # Apply reward based on current rocket data
+        # -------------------
+        # ----- REWARDS -----
+        # -------------------
+
         reward = 0.0
-        reward -= 0.1 * abs(angle)
-        reward -= 0.3 * (abs(vx) + abs(vy))
-        reward -= 0.2 * abs(x)
+
+        # Deduction for angle, squared to punish large tilts more harshly
+        reward -= 0.15 * (angle ** 2)
+
+        # Deduction for angular velocity
         reward -= 0.05 * abs(ang_vel)
-        #reward -= 0.1 * (1.0 - fuel) 
+
+        # Deduction for horizontal drift, encourages staying above pad
+        reward -= 0.3 * abs(x)
+
+        # Deduction for overall speed, squared to punish fast movement more
+        reward -= 0.2 * (vx ** 2 + vy ** 2)
+
+        # Reward for being low, encourages descending
         reward += 0.1 * (1.0 - y)
 
-        # Set rocket status is not terminated
+        # Reward slow descent when near the ground
+        if y < 0.3:
+            reward += 0.4 * max(0.0, 0.3 - abs(vy))
+            reward += 0.2 * max(0.0, 0.3 - abs(vx))  # also punish horizontal drift near ground
+            reward += 0.2 * max(0.0, 0.1 - abs(angle))  # reward being upright near ground
+
+        # Set rocket status to not terminated
         terminated = False
 
-        # Rocket is terminated if it is off screen horixontally
+        # Flat per-step survival penalty — keep it small and fixed
+        if not terminated:
+            reward -= 0.05
+
+        # Off screen penalty
         if abs(x) > self.x_limit:
             terminated = True
             reward -= 50.0
 
-        # Rewards for landing and near landings
+        # Landing outcomes
         if y <= 0.0:
             terminated = True
             y = 0.0
@@ -177,12 +199,9 @@ class RocketEnv(gym.Env):
             if soft_landing:
                 reward += 200.0
             elif near_landing:
-                reward += 100.0   # partial credit for close attempts
+                reward += 75.0
             else:
                 reward -= 100.0
-
-        if not terminated:
-            reward -= 0.2
 
         self.state = np.array([x, y, vx, vy, angle, ang_vel, fuel], dtype = np.float32)
 
@@ -214,16 +233,16 @@ class RocketEnv(gym.Env):
             # Start clock
             self.clock = pygame.time.Clock()
 
-        # Fill screen with dark gray
-        self.screen.fill((30, 30, 30))
+        # Fill screen with sky blue
+        self.screen.fill((135, 206, 235))
 
-        # Dray the ground as bright green
+        # Dray the ground as green
         pygame.draw.line(
             self.screen,
-            (100, 255, 100),
-            (0, self.screen_height - 10),
-            (self.screen_width, self.screen_height - 10),
-            3
+            (63, 155, 11),
+            (0, self.screen_height),
+            (self.screen_width, self.screen_height),
+            20
         )
 
         # Initialize x, y, and rocket agnle variable from the state
@@ -235,11 +254,17 @@ class RocketEnv(gym.Env):
         # Set y coordinate according to screen height and rocket height
         py = int(self.screen_height - (y * self.scale) - 10 - 25)
 
-        # Draw the rocket
-        rocket = pygame.Surface((20, 50), pygame.SRCALPHA)
+        # Draw the rocket OLD - FOR JUST A RECTANGLE
+        #rocket = pygame.Surface((20, 50), pygame.SRCALPHA)
 
-        # Color the rocket purple 
-        rocket.fill((200, 200, 255))
+        # Color the rocket purple OLD - FILL IN RECTANGLE
+        #rocket.fill((200, 200, 255))
+
+        # Load the rocket image
+        rocket = pygame.image.load("./assets/rocket.png").convert_alpha()
+
+        # Scale it to the same dimensions (20x50)
+        #rocket = pygame.transform.scale(rocket, (20, 50))
 
         # Angle the rocket the correct amount 
         rotated = pygame.transform.rotate(rocket, -math.degrees(angle))
@@ -394,7 +419,7 @@ class RocketEnv(gym.Env):
         pygame.draw.rect(
             self.screen,
             (200, 200, 200),
-            (self.screen_width // 2 - 40, self.screen_height - 15, 80, 5)
+            (self.screen_width // 2 - 40, self.screen_height - 15, 80, 20)
         )
 
         pygame.event.pump()
