@@ -4,28 +4,28 @@ title: Results
 
 ## Random Policy
 
-![Random Gif](./gifs/random.gif){width=60%}
+![Random Gif](./gifs/random.gif){width=75%}
 
 
 ---
 
 ## Deep Q-Learning Networks (DQN)
 
-![DQN Gif](./gifs/rllib_dqn_best.gif){width=60%}
+![DQN Gif](./gifs/rllib_dqn_best.gif){width=75%}
 
 
-![DQN Training Curves](./assets/dqn_training_curves.png){width=70%}
+![DQN Training Curves](./assets/dqn_training_curves.png){width=90%}
 
 ---
 
 ## Proximal Policy Optimization (PPO)
 
 
-![PPO Gif](./gifs/rllib_ppo_best.gif){width=60%}
+![PPO Gif](./gifs/rllib_ppo_best.gif){width=75%}
 
 
 
-![PPO Training Curves](./assets/ppo_training_curves.png){width=70%}
+![PPO Training Curves](./assets/ppo_training_curves.png){width=90%}
 
 ---
 

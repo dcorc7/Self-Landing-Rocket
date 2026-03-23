@@ -535,7 +535,7 @@ http://localhost:6006
 
 TensorBoard provides rich visualizations of your training run:
 
-**Scalars Tab** (most important):
+**Scalars Tab**:
 
 - `episode_reward_mean:` Average reward per episode (main success metric)
 - `episode_len_mean:` Average episode length in timesteps
