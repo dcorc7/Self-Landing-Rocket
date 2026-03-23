@@ -42,13 +42,13 @@ def main():
         .framework("torch")
         .debugging(log_level = "INFO")
         .env_runners(
-            num_env_runners = 4,
+            num_env_runners = 8,
             num_envs_per_env_runner = 4
         )
         .training(
             gamma = 0.99,
             lr = 1e-4,
-            train_batch_size = 4000,
+            train_batch_size = 6000,
             minibatch_size = 128,
             num_epochs = 10,
             clip_param = 0.2,

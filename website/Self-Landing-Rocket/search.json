@@ -18,14 +18,14 @@
     "href": "results.html#deep-q-learning-networks-dqn",
     "title": "Results",
     "section": "Deep Q-Learning Networks (DQN)",
-    "text": "Deep Q-Learning Networks (DQN)\n\n\n\nDQN Gif"
+    "text": "Deep Q-Learning Networks (DQN)\n\n\n\nDQN Gif\n\n\n\n\n\nDQN Training Curves"
   },
   {
     "objectID": "results.html#proximal-policy-optimization-ppo",
     "href": "results.html#proximal-policy-optimization-ppo",
     "title": "Results",
     "section": "Proximal Policy Optimization (PPO)",
-    "text": "Proximal Policy Optimization (PPO)\n\n\n\nPPO Gif"
+    "text": "Proximal Policy Optimization (PPO)\n\n\n\nPPO Gif\n\n\n\n\n\nPPO Training Curves"
   },
   {
     "objectID": "results.html#limitations",

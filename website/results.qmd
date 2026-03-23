@@ -14,6 +14,8 @@ title: Results
 ![DQN Gif](./gifs/rllib_dqn_best.gif){width=60%}
 
 
+![DQN Training Curves](./assets/dqn_training_curves.png){width=70%}
+
 ---
 
 ## Proximal Policy Optimization (PPO)
@@ -22,6 +24,8 @@ title: Results
 ![PPO Gif](./gifs/rllib_ppo_best.gif){width=60%}
 
 
+
+![PPO Training Curves](./assets/ppo_training_curves.png){width=70%}
 
 ---
 

@@ -394,31 +394,13 @@ class RocketEnv(gym.Env):
             border_radius = 3
         )
 
-
-        pygame.draw.rect(
-            self.screen,
-            (50, 220, 50),
-            (bar_x, fill_y, bar_width, fill_height),
-            border_radius = 3
-        )
-
-        # Optional outline
-        pygame.draw.rect(
-            self.screen,
-            (200, 200, 200),
-            (bar_x, bar_y, bar_width, bar_height),
-            1,
-            border_radius = 3
-        )
-
-
         # Draw the rocket
         self.screen.blit(rotated, rect)
 
         # Draw a landing pad
         pygame.draw.rect(
             self.screen,
-            (200, 200, 200),
+            (135, 135, 135),
             (self.screen_width // 2 - 40, self.screen_height - 15, 80, 20)
         )
 

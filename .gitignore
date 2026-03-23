@@ -7,4 +7,4 @@ __pycache__/
 .DS_Store
 *.egg-info/
 
-./ray_results/*
+ray_results/
