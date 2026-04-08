@@ -46,7 +46,49 @@
     "href": "index.html",
     "title": "Self Landing Rocket Using Reinforcement Learning",
     "section": "",
-    "text": "Introduction\n\n\nMotivation\n\n\nGithub Repository\nThe Github repository hosting all code for this project can be found here\n\n\n\n\n Back to top"
+    "text": "Autonomous rocket landing is one of the most demanding control problems in aerospace engineering. A rocket returning from flight must simultaneously manage its altitude, horizontal drift, orientation, and velocity, all in real time and under the unforgiving influence of gravity. SpaceX’s Falcon 9 demonstrated this is physically achievable; this project asks whether reinforcement learning can discover those same control strategies from scratch, through trial and error alone.\nBuilt around a custom 2D physics simulation using Gymnasium and rendered with PyGame, this project trains deep RL agents to execute soft landings on a designated pad. Training is powered by Ray RLlib, which provides scalable, distributed learning across both DQN and PPO algorithms. The result is an agent that learns — without human demonstration or hardcoded logic — to fire its engines at precisely the right moments to touch down safely."
+  },
+  {
+    "objectID": "index.html#introduction",
+    "href": "index.html#introduction",
+    "title": "Self Landing Rocket Using Reinforcement Learning",
+    "section": "",
+    "text": "Autonomous rocket landing is one of the most demanding control problems in aerospace engineering. A rocket returning from flight must simultaneously manage its altitude, horizontal drift, orientation, and velocity, all in real time and under the unforgiving influence of gravity. SpaceX’s Falcon 9 demonstrated this is physically achievable; this project asks whether reinforcement learning can discover those same control strategies from scratch, through trial and error alone.\nBuilt around a custom 2D physics simulation using Gymnasium and rendered with PyGame, this project trains deep RL agents to execute soft landings on a designated pad. Training is powered by Ray RLlib, which provides scalable, distributed learning across both DQN and PPO algorithms. The result is an agent that learns — without human demonstration or hardcoded logic — to fire its engines at precisely the right moments to touch down safely."
+  },
+  {
+    "objectID": "index.html#motivation",
+    "href": "index.html#motivation",
+    "title": "Self Landing Rocket Using Reinforcement Learning",
+    "section": "Motivation",
+    "text": "Motivation\nClassical control methods like PID controllers or model predictive control require careful hand-tuning and rely on accurate physical models. Reinforcement learning offers a different path: given only a reward signal defining what a “good” landing looks like, an agent can discover effective strategies autonomously — and potentially generalize to conditions a human designer never anticipated.\nTo achieve this, the project was built around four core design decisions:\n\nA 6-dimensional continuous state space capturing position, velocity, angle, and angular velocity\nA shaped reward function that continuously penalizes instability and rewards controlled descent\nRLlib-based training using DQN and PPO, enabling fast iteration with production-grade algorithms\nA discrete action space (no-op, rotate left, main engine, rotate right) mirroring real thruster control logic\n\nBy shaping rewards around stability and precision rather than mere survival, the agent learns behaviors that resemble genuine flight discipline — staying upright, decelerating before contact, and homing in on the landing pad."
+  },
+  {
+    "objectID": "index.html#environment-details",
+    "href": "index.html#environment-details",
+    "title": "Self Landing Rocket Using Reinforcement Learning",
+    "section": "Environment Details",
+    "text": "Environment Details\nThe environment is a custom Gymnasium implementation simulating 2D rigid-body rocket dynamics. At each timestep, the agent observes a 6-variable state vector and selects one of four discrete thrust actions. An episode ends when the rocket contacts the ground — either in a successful soft landing or a crash.\n\nState Space (Continuous)\n\n\n\nVariable\nDescription\nRange\n\n\n\n\nx\nHorizontal position (normalized)\n[-1.0, 1.0]\n\n\ny\nVertical position (normalized)\n[0.0, 1.2]\n\n\nvx\nHorizontal velocity\n[-2.0, 2.0]\n\n\nvy\nVertical velocity\n[-2.0, 2.0]\n\n\nθ\nAngle from vertical\n[-π, π] radians\n\n\nω\nAngular velocity\n[-2.0, 2.0] rad/s\n\n\n\n\n\nAction Space (Discrete)\n\n\n\nAction ID\nDescription\nEffect\n\n\n\n\n0\nNo-op\nCoast/freefall\n\n\n1\nRotate left\nApply counterclockwise torque\n\n\n2\nMain engine\nFire thruster along rocket axis\n\n\n3\nRotate right\nApply clockwise torque\n\n\n\n\n\nPhysics\nThe simulation uses simplified 2D rigid-body dynamics: constant downward gravity, main thrust applied along the rocket’s longitudinal axis, and angular torque for rotation control. Position and velocity are integrated each step, with the arena bounded horizontally to [-1.0, 1.0] and vertically to [0.0, 1.2]."
+  },
+  {
+    "objectID": "index.html#algorithms",
+    "href": "index.html#algorithms",
+    "title": "Self Landing Rocket Using Reinforcement Learning",
+    "section": "Algorithms",
+    "text": "Algorithms\nTraining uses Ray RLlib — an industry-standard distributed RL library — to run two complementary algorithms. Both are applied to the same environment, enabling direct comparison of value-based versus policy-based approaches on this control task.\n\nDQN (Deep Q-Network)\n\nType: Value-based, off-policy\nHow it works: Learns a Q-function estimating expected future reward for each action, then selects the action with the highest Q-value\nKey features: Experience replay for sample efficiency, target network for training stability, Double Q-learning and dueling architecture via RLlib\nBest for: Discrete action spaces where sample efficiency matters\n\n\n\nPPO (Proximal Policy Optimization)\n\nType: Policy-based, on-policy\nHow it works: Directly optimizes the policy using a clipped surrogate objective that prevents destructively large updates\nKey features: Generalized Advantage Estimation (GAE), multiple parallel workers for on-policy sampling, automatic learning rate tuning\nBest for: Stable training with minimal hyperparameter sensitivity\n\nBoth algorithms are run through RLlib’s distributed infrastructure, which handles parallel environment sampling, checkpointing, and TensorBoard logging automatically."
+  },
+  {
+    "objectID": "index.html#reward-function",
+    "href": "index.html#reward-function",
+    "title": "Self Landing Rocket Using Reinforcement Learning",
+    "section": "Reward Function",
+    "text": "Reward Function\nReward shaping is central to the project. Rather than offering a sparse signal only at episode end, the agent receives continuous feedback every step — penalized for tilting, drifting off-center, and moving too fast. A large terminal bonus or penalty is applied on ground contact based on landing quality.\n# Step reward — computed each timestep during flight\nreward = 0.0\n\n# Penalize tilt — encourages staying upright\nreward -= 0.1 * abs(angle)\n\n# Penalize speed — encourages slow, controlled descent\nreward -= 0.3 * (abs(vx) + abs(vy))\n\n# Penalize horizontal offset — encourages centering over the pad\nreward -= 0.2 * abs(x)\n\n# Time penalty — encourages efficient landings\nreward -= 0.05\n\n# Terminal reward — applied on ground contact\nif y &lt;= 0.0:\n    soft_landing = (\n        abs(x) &lt; 0.1       # centered on pad\n        and abs(vx) &lt; 0.1  # low lateral speed\n        and abs(vy) &lt; 0.2  # low vertical speed\n        and abs(angle) &lt; 0.1  # nearly upright\n    )\n    reward += 100.0 if soft_landing else -100.0"
+  },
+  {
+    "objectID": "index.html#github-repository",
+    "href": "index.html#github-repository",
+    "title": "Self Landing Rocket Using Reinforcement Learning",
+    "section": "GitHub Repository",
+    "text": "GitHub Repository\nThe GitHub repository hosting all code for this project can be found here."
   },
   {
     "objectID": "methods.html#deep-q-learning-netowrks-dqn",
