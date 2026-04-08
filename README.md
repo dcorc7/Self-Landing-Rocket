@@ -1,33 +1,53 @@
 # Self-Landing Rocket Reinforcement Learning
 
-A reinforcement learning environment for training autonomous rocket landing agents. Built with Gymnasium, PyGame, and Ray RLlib, this project demonstrates how deep RL algorithms can master complex physics-based control tasks similar to SpaceX's autonomous landing systems.
+A custom reinforcement learning environment for training autonomous rocket landing agents. Built with Gymnasium, PyGame, and Ray RLlib, this project demonstrates how deep RL algorithms can learn stable control policies in a physics-based landing task.
 
 ---
 
 ## Table of Contents
 
-- [Overview](#-overview)
-- [Reinforcement Learning Concepts](#-reinforcement-learning-concepts)
-- [Environment Details](#-environment-details)
-- [Project Structure](#-project-structure)
-- [Installation](#️-installation)
-- [Training Agents](#-training-agents)
-- [Algorithm Comparison](#-algorithm-comparison)
-- [Customization](#-customization)
-- [Results & Visualization](#-results--visualization)
+- [Self-Landing Rocket Reinforcement Learning](#self-landing-rocket-reinforcement-learning)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Reinforcement Learning Concepts](#reinforcement-learning-concepts)
+    - [What is Reinforcement Learning?](#what-is-reinforcement-learning)
+    - [Key RL Components](#key-rl-components)
+    - [Core Setup](#core-setup)
+    - [Algorithms Used](#algorithms-used)
+        - [**DQN (Deep Q-Network)**](#dqn-deep-q-network)
+        - [**PPO (Proximal Policy Optimization)**](#ppo-proximal-policy-optimization)
+  - [Environment Details](#environment-details)
+    - [State Space (7 Continuous Variables)](#state-space-7-continuous-variables)
+    - [Action Space (Discrete)](#action-space-discrete)
+    - [Physics Model](#physics-model)
+  - [Reward Function](#reward-function)
+    - [Per-Step Components](#per-step-components)
+    - [Terminal Rewards](#terminal-rewards)
+  - [Project Structure](#project-structure)
+  - [Installation](#installation)
+    - [Requirements](#requirements)
+    - [Setup](#setup)
+  - [Training Agents](#training-agents)
+    - [Train DQN](#train-dqn)
+    - [Train PPO](#train-ppo)
+  - [Algorithm Configuration Summaryc](#algorithm-configuration-summaryc)
+  - [Customization](#customization)
+  - [Results \& Visualization](#results--visualization)
+  - [Acknowledgments](#acknowledgments)
 
 ---
 
 ## Overview
 
-This project tackles the challenge of autonomous rocket landing using reinforcement learning. The agent must learn to:
+This project formulates rocket landing as a sequential decision-making problem. The agent must learn to:
 
-- Control thrust to manage velocity and altitude
-- Adjust orientation to remain upright
-- Execute soft landings within a designated target zone
-- Conserve fuel while maintaining stability
+- Stabilize orientation during descent  
+- Control vertical and horizontal velocity  
+- Remain centered over a landing pad  
+- Execute a soft landing within strict tolerances  
+- Manage limited fuel  
 
-The environment provides realistic physics simulation with continuous state dynamics and discrete control actions, making it an ideal testbed for modern deep RL algorithms.
+The environment uses continuous 2D rigid-body dynamics and a discrete thruster-based control scheme. Agents are trained using Ray RLlib implementations of DQN and PPO with distributed environment sampling.
 
 ---
 
@@ -52,28 +72,21 @@ Unlike supervised learning, there are no labeled "correct" answers—the agent m
 - **Policy (π)**: The agent's strategy mapping states to actions
 - **Value Function (V/Q)**: Expected future reward from a state or state-action pair
 
-### Training Approaches in This Project
+### Core Setup
 
-#### 1. **RLlib-Based Training**
+At each timestep the agent:
 
-**Ray RLlib** is an industry-standard, production-ready RL library that provides:
+1. Observes the current rocket state  
+2. Selects one of four discrete actions  
+3. Receives a shaped reward  
+4. Updates its policy to maximize long-term return  
 
-- **Scalable distributed training** across multiple CPUs/GPUs
-- **Battle-tested implementations** of state-of-the-art algorithms
-- **Automatic hyperparameter tuning** with Ray Tune integration
-- **Robust checkpointing** and experiment tracking
-- **Vectorized environments** for faster training
+There are no demonstrations or scripted heuristics. The policy is learned entirely from reward feedback.
 
-**Why use RLlib?**
-- Pre-optimized algorithms with years of community refinement
-- Handles complex training infrastructure automatically
-- Production deployment capabilities
-- Active maintenance and bug fixes
-- Extensive documentation and community support
-
-**Supported RLlib Algorithms:**
+### Algorithms Used
 
 ##### **DQN (Deep Q-Network)**
+
 - **Type**: Value-based, off-policy
 - **Best for**: Discrete action spaces, sample-efficient learning
 - **How it works**: Learns a Q-function that estimates expected future rewards for each action, then selects actions with highest Q-values
@@ -82,8 +95,18 @@ Unlike supervised learning, there are no labeled "correct" answers—the agent m
   - Stable convergence with target networks
   - Well-suited for environments with clear optimal actions
 - **Use when**: You have discrete actions and want reliable, sample-efficient training
+- **Model Setup**:
+  - Experience replay (capacity = 50,000)  
+  - Target network updates every 500 steps  
+  - Double Q-learning enabled  
+  - Dueling architecture enabled  
+  - Learning rate = 1e-3  
+  - Discount factor = 0.99  
+  - Train batch size = 3000  
+  - Parallel sampling = 6 env runners × 4 envs each  
 
 ##### **PPO (Proximal Policy Optimization)**
+
 - **Type**: Policy-based, on-policy
 - **Best for**: Continuous/discrete actions, stable training
 - **How it works**: Directly optimizes the policy while constraining updates to prevent destructive large changes
@@ -92,106 +115,137 @@ Unlike supervised learning, there are no labeled "correct" answers—the agent m
   - Works well with continuous action spaces
   - Less sensitive to hyperparameters
 - **Use when**: You need robust, stable training or plan to extend to continuous control
+- **Model Setup**:
+  - Learning rate = 1e-4  
+  - Gamma = 0.99  
+  - Train batch size = 6000  
+  - Minibatch size = 128  
+  - Num epochs = 10  
+  - Clip parameter = 0.2  
+  - Entropy coefficient = 0.01  
+  - Value loss coefficient = 0.5  
+  - Parallel sampling = 8 env runners × 4 envs each  
 
-#### 2. **Custom RL Implementations**
-
-The project also includes custom-built RL agents for learning purposes:
-
-- **`dqn_agent.py`**: Educational DQN implementation from scratch
-- **`ppo_agent.py`**: Custom PPO implementation
-
-**When to use custom implementations:**
-- Learning RL fundamentals and algorithm internals
-- Experimenting with novel algorithm modifications
-- Research projects requiring non-standard techniques
-- Educational purposes and debugging
+Both algorithms use Ray’s distributed execution model for scalable rollout collection.
 
 ---
 
 ## Environment Details
 
-### State Space (Continuous)
+This section defines the learning problem itself: what the agent observes, what actions it can take, how the physics evolves over time, and when an episode ends. Together, these components specify the Markov Decision Process that the reinforcement learning algorithms optimize against.
 
-The rocket's state is represented by 6 continuous variables:
+
+### State Space (7 Continuous Variables)
+
+The state space describes what the agent can observe at each timestep. It is represented as a 7-dimensional continuous vector:
+
+
+```
+[x, y, vx, vy, angle, angular_velocity, fuel]
+
+```
 
 | Variable | Description | Range |
-|----------|-------------|-------|
-| **x** | Horizontal position | [-1.0, 1.0] (normalized) |
-| **y** | Vertical position | [0.0, 1.2] (normalized) |
-| **vx** | Horizontal velocity | [-2.0, 2.0] |
-| **vy** | Vertical velocity | [-2.0, 2.0] |
-| **θ** | Angle from vertical | [-π, π] radians |
-| **ω** | Angular velocity | [-2.0, 2.0] rad/s |
+|-----------|------------|--------|
+| x | Horizontal position | [-1.5, 1.5] |
+| y | Vertical position | [-1.95, 1.95] |
+| vx | Horizontal velocity | [-2.0, 2.0] |
+| vy | Vertical velocity | [-2.0, 2.0] |
+| angle | Orientation in radians | [-π, π] |
+| angular_velocity | Rotational velocity | [-2.0, 2.0] |
+| fuel | Remaining fuel fraction | [0.0, 1.0] |
+
+Initial state:
+- x sampled uniformly from [-0.5, 0.5]  
+- y sampled from [0.8, 1.2]  
+- angle sampled from [-0.3, 0.3]  
+- vx, vy, angular velocity initialized to 0  
+- fuel initialized to 1.0  
+
+These randomized initial conditions promote generalization and prevent the agent from overfitting to a single descent trajectory.
+
+---
 
 ### Action Space (Discrete)
 
-The agent controls the rocket through 4 discrete actions:
+The action space defines the set of control inputs available to the agent. At each timestep, the agent selects one of four discrete actions that correspond to simplified thruster commands.
 
-| Action ID | Description | Effect |
-|-----------|-------------|--------|
-| 0 | No-op | Coast/freefall (no thrust, no rotation) |
-| 1 | Rotate left | Apply angular thrust counterclockwise |
-| 2 | Main engine | Fire main thruster along rocket axis |
-| 3 | Rotate right | Apply angular thrust clockwise |
+| Action | Description |
+|--------|------------|
+| 0 | No-op |
+| 1 | Rotate left |
+| 2 | Fire main engine |
+| 3 | Rotate right |
 
-### Reward Function
+Main engine thrust is applied along the rocket axis and consumes 0.01 fuel per activation.
 
-The reward function shapes learning through continuous feedback and terminal bonuses:
+This discrete structure simplifies the control problem while still requiring coordinated orientation and thrust decisions for a successful landing.
 
-```python
-# Step rewards (during flight)
-reward = 0.0
 
-# Angle penalty - encourages staying upright
-reward -= 0.1 * abs(angle)
+---
 
-# Velocity penalty - encourages slow, controlled descent
-reward -= 0.3 * (abs(vx) + abs(vy))
+### Physics Model
 
-# Position penalty - encourages staying centered over landing pad
-reward -= 0.2 * abs(x)
+The physics model governs how the rocket transitions from one state to the next after an action is applied. It defines the environment’s dynamics and determines how thrust, gravity, and rotation influence motion over time.
 
-# Time penalty - encourages efficiency
-reward -= 0.05
+- Gravity = -0.05 per timestep  
+- Main thrust acceleration = 0.20  
+- Angular thrust = ±0.05  
+- Angular damping multiplier = 0.99  
+- Integration method = Euler  
+- Time step dt = 0.05  
 
-# Terminal rewards (upon ground contact)
-if y <= 0.0:
-    # Check landing conditions
-    soft_landing = (
-        abs(x) < 0.1          # Centered on landing pad
-        and abs(vx) < 0.1     # Low horizontal velocity
-        and abs(vy) < 0.2     # Low vertical velocity  
-        and abs(angle) < 0.1  # Nearly upright
-    )
-    
-    if soft_landing:
-        reward += 100.0       # Success bonus
-    else:
-        reward -= 100.0       # Crash penalty
-```
+Episode termination conditions:
+- Rocket hits the ground (y ≤ 0)  
+- Rocket leaves horizontal bounds (|x| > 1.5)  
 
-**Reward Shaping Strategy:**
-- **Continuous penalties** guide the agent toward desired behavior during flight
-- **Angle stability**: Staying upright is constantly rewarded
-- **Velocity control**: Slower descent receives better rewards
-- **Centering**: Being over the landing pad is incentivized
-- **Terminal bonus**: Large rewards/penalties at episode end drive learning
+These termination rules define success and failure boundaries and ensure each episode eventually concludes.
 
-### Physics Simulation
+---
 
-The environment uses simplified 2D rigid body dynamics:
+## Reward Function
 
-**Forces & Motion:**
-- **Gravity**: Constant downward acceleration (`-0.05` per timestep)
-- **Main thrust**: Force applied along rocket's longitudinal axis (`0.20` acceleration)
-- **Angular thrust**: Torque for rotation control (`±0.05` angular acceleration)
-- **Velocity integration**: Direct position updates from velocity
+The reward function specifies the objective the agent optimizes during training. Instead of rewarding only final success, the environment uses dense reward shaping to guide learning throughout the descent, encouraging progressively more stable and controlled behavior.
 
-**Physical Constraints:**
-- **Bounded arena**: Horizontal position clipped to `[-1.0, 1.0]`, vertical to `[0.0, 1.2]`
-- **Ground collision**: Episode terminates when `y ≤ 0`
-- **No drag**: Simplified physics without aerodynamic forces
-- **No fuel limit**: Unlimited thrust available (can be modified for added difficulty)
+### Per-Step Components
+
+- Angle penalty = -0.15 × angle²  
+- Angular velocity penalty = -0.05 × |angular_velocity|  
+- Horizontal drift penalty = -0.3 × |x|  
+- Velocity penalty = -0.2 × (vx² + vy²)  
+- Descent encouragement = +0.1 × (1.0 - y)  
+- Survival penalty = -0.05 per step  
+
+Near-ground shaping (if y < 0.3):
+- Bonus for slow vertical velocity  
+- Bonus for low horizontal drift  
+- Bonus for near-upright orientation  
+
+These components help stabilize training by rewarding incremental improvements rather than only perfect landings.
+
+### Terminal Rewards
+
+Terminal rewards are applied when an episode ends and provide strong outcome-based signals. They distinguish successful landings from partial success or failure, reinforcing high-quality control strategies.
+
+Soft landing (all conditions satisfied):
+- |x| < 0.1  
+- |vx| < 0.1  
+- |vy| < 0.2  
+- |angle| < 0.1  
+Reward = +200  
+
+Near landing:
+- |x| < 0.3  
+- |vx| < 0.3  
+- |vy| < 0.4  
+- |angle| < 0.3  
+Reward = +75  
+
+Crash:
+Reward = -100  
+
+Leaving bounds of the screens:
+Reward = -50  
 
 ---
 
@@ -202,359 +256,260 @@ Self-Landing-Rocket/
 │
 ├── rocket_landing/
 │   ├── environment/
-│   │   └── rocket_env.py              # Gymnasium environment implementation
-│   │
-│   ├── agents/
-│   │   ├── dqn_agent.py               # Custom DQN implementation
-│   │   └── ppo_agent.py               # Custom PPO implementation 
+│   │   └── rocket_env.py
 │   │
 │   └── training/
-│       ├── train_rllib_dqn.py         # RLlib DQN training 
-│       ├── train_rllib_ppo.py         # RLlib PPO training 
-│       ├── train_custom_dqn.py        # Custom DQN training 
-│       ├── train_custom_ppo.py        # Custom PPO training 
-│       └── training_plots/            # Generated learning curves
+│       ├── train_rllib_dqn.py
+│       ├── train_rllib_ppo.py
+│       └── training_plots/
 │
 ├── policies/
-│   ├── rllib_dqn_best/                # Best DQN checkpoint
-│   └── rllib_ppo_best/                # Best PPO checkpoint
+│   ├── rllib_dqn_best/
+│   └── rllib_ppo_best/
 │
-├── gifs/                              # Rollout visualizations
-├── ray_results/                       # RLlib experiment logs
+├── gifs/
+├── ray_results/
 │
-├── pyproject.toml                     # Poetry dependencies
-├── README.md
-└── .venv/                             # Virtual environment
+├── pyproject.toml
+└── README.md
 ```
 
 ---
 
 ## Installation
 
-### Prerequisites
+This section walks through setting up the project locally. The environment is managed with Poetry to ensure consistent dependencies and reproducible training runs.
 
-- **Python 3.11** (required — Ray RLlib doesn't support Python 3.13 yet)
-- **Poetry** package manager
+### Requirements
 
-#### Verify Python Installation
+Before installing, make sure the following are available on your system:
 
-```bash
-# Check available Python versions
-py --list
+- Python 3.11  
+- Poetry  
 
-# Should show Python 3.11.x
-```
+Python 3.11 is recommended to ensure compatibility with Gymnasium and Ray RLlib. Poetry is used for dependency management and virtual environment isolation.
 
-#### Install Poetry (if not already installed)
+### Setup
 
-```bash
-# Windows (PowerShell)
-(Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | py -
-
-# Linux/macOS
-curl -sSL https://install.python-poetry.org | python3 -
-```
-
-### Setup Instructions
+Clone the repository and install dependencies:
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/yourusername/Self-Landing-Rocket.git
+git clone https://github.com/dcorc7/Self-Landing-Rocket.git
 cd Self-Landing-Rocket
 
-# 2. Install dependencies with Poetry
 poetry install
-
-# 3. Activate virtual environment
 poetry shell
-
-# 4. Verify installation
-poetry run python -c "import gymnasium; import ray; print('Setup successful!')"
 ```
+
+- **git clone** downloads the project source code.
+- **poetry install** installs all required dependencies listed in pyproject.toml.
+- **poetry shell** activates the project’s virtual environment so all commands run in an isolated environment.
+
+Verify installation:
+
+```bash
+poetry run python -c "import gymnasium; import ray; print(\"Setup successful\")"
+```
+
+This command confirms that Gymnasium and Ray are properly installed and importable.
 
 ---
 
 ## Training Agents
 
-### Option 1: RLlib Training
+This project supports training with both DQN and PPO using Ray RLlib. Each training script initializes the environment, configures the algorithm, and runs distributed rollouts until a stopping condition is met.
 
-#### Train with DQN
+Training logs, checkpoints, and plots are automatically generated.
+
+### Train DQN
 
 ```bash
 poetry run python -m rocket_landing.training.train_rllib_dqn
 ```
 
-**Training process:**
-- Initializes Ray cluster for distributed execution
-- Creates vectorized environments for parallel sampling
-- Trains DQN with experience replay and target networks
-- Saves checkpoints every N iterations
-- Generates training curves automatically
+This script:
 
-**Outputs:**
-- Checkpoints: `./ray_results/DQN_RocketLanding_[timestamp]/`
-- Best policy: `./policies/rllib_dqn_best/`
-- Training plots: `./training_plots/dqn_training_curves.png`
+- Registers the custom Gymnasium environment
+- Configures RLlib’s DQN algorithm
+- Enables experience replay and target networks
+- Launches parallel environment workers
+- Periodically logs performance metrics
 
-#### Train with PPO
+Training stops when:
+
+- 150 iterations are reached, or
+- Mean episode return ≥ 150
+
+These stopping criteria prevent unnecessary overtraining once stable landing behavior has emerged.
+
+Best checkpoint saved to:
+
+```
+policies/rllib_dqn_best/
+```
+
+This directory contains the highest-performing model weights discovered during training. These can be reloaded later for evaluation or visualization.
+
+Training curves saved to:
+
+```
+rocket_landing/training/training_plots/dqn_training_curves.png
+```
+
+The generated plots typically include:
+
+- Mean episode return over time
+- Episode length trends
+
+These curves help diagnose learning stability and convergence.
+
+---
+
+### Train PPO
 
 ```bash
 poetry run python -m rocket_landing.training.train_rllib_ppo
 ```
 
-**Training process:**
-- Uses multiple parallel workers for on-policy sampling
-- Implements clipped surrogate objective for stable updates
-- Employs GAE (Generalized Advantage Estimation)
-- Automatically tunes learning rate during training
+This script configures RLlib’s PPO implementation, which differs from DQN in several key ways:
 
-**Outputs:**
-- Checkpoints: `./ray_results/PPO_RocketLanding_[timestamp]/`
-- Best policy: `./policies/rllib_ppo_best/`
-- Training plots: `./training_plots/ppo_training_curves.png`
+- Uses on-policy rollouts
+- Optimizes a clipped surrogate objective
+- Performs multiple epochs over collected batches
 
-### Option 2: Custom Implementations
+Training stops when:
 
-#### Train Custom DQN
+- 200 iterations are reached, or
+- Mean episode return ≥ 175
 
-```bash
-poetry run python -m rocket_landing.training.train_custom_dqn
+PPO generally requires larger batch sizes and more iterations due to its on-policy nature.
+
+Best checkpoint saved to:
+
+```
+policies/rllib_ppo_best/
 ```
 
-**What you'll learn:**
-- Q-learning update rules
-- Experience replay buffer implementation
-- Epsilon-greedy exploration strategies
-- Target network synchronization
+Training curves saved to:
 
-#### Train Custom PPO
-
-```bash
-poetry run python -m rocket_landing.training.train_custom_ppo
+```
+rocket_landing/training/training_plots/ppo_training_curves.png
 ```
 
-**What you'll learn:**
-- Policy gradient theorem
-- Advantage estimation techniques
-- Clipping mechanisms for stability
-- On-policy vs off-policy learning
+These plots provide a visual comparison to DQN and help evaluate stability and sample efficiency.
 
 ---
 
-## Algorithm Comparison
+## Algorithm Configuration Summaryc
 
-| Feature | RLlib DQN | RLlib PPO | Custom DQN | Custom PPO |
-|---------|-----------|-----------|------------|------------|
-| **Training Speed** | Fast | Fast | Slow | Slow |
-| **Sample Efficiency** | High | Medium | High  Medium |
-| **Stability** | Excellent |  Excellent  Good  Good |
-| **Scalability** | Multi-core | Multi-core | Single-core | Single-core |
-| **Best For** | Production | Production | Learning | Learning |
-| **Action Space** | Discrete only | Both | Discrete only | Both |
-| **Hyperparameter Tuning** | Auto-tuning | Auto-tuning | Manual | Manual |
+This table highlights structural differences between the two algorithms:
 
-### When to Choose Each Algorithm
+| Feature           | DQN              | PPO               |
+| ----------------- | ---------------- | ----------------- |
+| Type              | Off-policy       | On-policy         |
+| Replay Buffer     | Yes              | No                |
+| Parallel Sampling | 24 envs          | 32 envs           |
+| Train Batch Size  | 3000             | 6000              |
+| Stop Condition    | Return ≥ 150     | Return ≥ 175      |
+| Architecture      | Double + Dueling | Clipped objective |
 
-**Choose RLlib DQN if:**
-- You have discrete actions
-- Sample efficiency is critical (limited environment interactions)
-- You want reliable, production-ready training
-- You need fast convergence
+Key distinctions:
 
-**Choose RLlib PPO if:**
-- You might extend to continuous actions later
-- You want maximum stability
-- You're new to RL and want forgiving hyperparameters
-- You prefer on-policy learning
-
-**Choose Custom Implementations if:**
-- You're learning RL fundamentals
-- You need to modify algorithm internals
-- You're conducting research on novel techniques
-- Educational purposes
+- DQN reuses past experience through replay, improving sample efficiency.
+- PPO collects fresh trajectories each iteration, improving stability at the cost of more environment interaction.
+- PPO typically produces smoother learning curves, while DQN can converge faster but may be more sensitive to hyperparameters.
 
 ---
 
 ## Customization
 
-### Modify Environment Parameters
+The project is modular and designed for experimentation. 
 
-Edit `rocket_landing/environment/rocket_env.py`:
+Modify physics parameters in:
 
-```python
-class RocketEnv(gym.Env):
-    def __init__(self):
-        # Physics constants
-        self.gravity = -0.05          # Downward acceleration per step
-        self.main_thrust = 0.20       # Main engine acceleration
-        self.angular_thrust = 0.05    # Rotational acceleration
-        
-        # Boundary limits
-        self.max_x = 1.0              # Horizontal bounds
-        self.max_y = 1.2              # Maximum altitude
-        
-        # Initial conditions (in reset())
-        # x: random in [-0.1, 0.1]
-        # y: starts at 1.0
-        # angle: random in [-0.05, 0.05]
+```
+rocket_landing/environment/rocket_env.py
 ```
 
-**Difficulty Adjustments:**
-- Increase `gravity` for harder landings
-- Decrease `main_thrust` to limit control authority
-- Increase initial altitude by changing `y = 1.0` to `y = 1.5`
-- Add initial velocities in `reset()` for dynamic starts
-- Tighten landing tolerances in reward function
+Key adjustable parameters:
 
-### Tune Hyperparameters
+- gravity
+- main_thrust
+- angular_thrust
+- fuel consumption rate
+- landing tolerances
+- reward weights
 
-Edit `rocket_landing/training/train_rllib_dqn.py`:
+Changing these values alters the difficulty and structure of the control problem. For example:
 
-```python
-config = (
-    DQNConfig()
-    .environment(
-        env="RocketLanding-v0",
-        env_config={"render_mode": None},
-    )
-    .framework("torch")
-    .training(
-        gamma=0.99,                       # Discount factor
-        lr=1e-3,                          # Learning rate
-        train_batch_size=4000,            # Samples per training step
-        replay_buffer_config={
-            "capacity": 200000            # Experience replay size
-        },
-        target_network_update_freq=1000,  # Target net sync frequency
-        dueling=True,                     # Use dueling DQN architecture
-        double_q=True,                    # Use double Q-learning
-    )
-)
+- Increasing gravity makes descent harder.
+- Increasing fuel consumption forces more efficient thrust usage.
+- Adjusting reward weights changes what behaviors are emphasized during learning.
 
-# Training configuration
-stop = {"training_iteration": 200}        # Number of training iterations
-checkpoint_frequency = 10                 # Save checkpoint every N iterations
+Modify training hyperparameters in:
+
+```
+rocket_landing/training/train_rllib_dqn.py
+rocket_landing/training/train_rllib_ppo.py
 ```
 
-**Key Hyperparameters Explained:**
-- `gamma`: How much future rewards matter (0.99 = far-sighted)
-- `lr`: Learning rate for neural network updates
-- `train_batch_size`: Larger = more stable but slower
-- `replay_buffer_config.capacity`: More memory = better sample diversity
-- `target_network_update_freq`: Lower = more stable but slower learning
+Here you can adjust:
 
-### Custom Reward Shaping
+- Learning rate
+- Batch sizes
+- Discount factor
+- Entropy regularization
+- vNetwork architecture
 
-Modify the reward function in `rocket_env.py`:
-
-```python
-def step(self, action):
-    # ... [action and physics code] ...
-    
-    # Custom reward logic
-    reward = 0.0
-    
-    # Heavier penalty for being off-center
-    reward -= 0.5 * abs(x)  # Increased from 0.2
-    
-    # Reward for descending (negative vy)
-    if vy < 0:
-        reward += 0.1  # Bonus for controlled descent
-    
-    # Exponential angle penalty
-    reward -= 0.2 * (angle ** 2)  # Quadratic instead of linear
-    
-    # Terminal rewards
-    if y <= 0.0:
-        soft_landing = (
-            abs(x) < 0.05       # Tighter centering requirement
-            and abs(vx) < 0.05  # Slower horizontal speed
-            and abs(vy) < 0.15  # Slower vertical speed
-            and abs(angle) < 0.05  # More upright requirement
-        )
-        
-        if soft_landing:
-            reward += 100.0
-        else:
-            reward -= 100.0
-    
-    return self.state, reward, terminated, truncated, {}
-```
+This enables systematic experimentation and hyperparameter tuning.
 
 ---
 
 ## Results & Visualization
 
-### Training Curves
+Training produces:
 
-After training, view learning progress:
+- vMean episode return curves
+- Mean episode length curves
+- Best-performing checkpoints
+
+These outputs allow you to:
+
+- Measure convergence speed
+- Compare DQN vs PPO performance
+- Reload trained policies for simulation
+
+TensorBoard logs are stored in:
 
 ```
-training_plots/
-├── dqn_training_curves.png         # DQN learning curves
-└── ppo_training_curves.png         # PPO learning curves
+ray_results/
 ```
 
-**Metrics plotted:**
-- **Episode Reward Mean**: Average cumulative reward per episode
-- **Episode Length Mean**: Average number of steps before termination
-- **Success Rate**: Percentage of successful landings (optional)
+These logs include:
 
-### Generate Rollout Videos
+- Training loss
+- Policy entropy
+- Value loss
+- Episode reward metrics
 
-Visualize trained policies in action:
+Launch TensorBoard:
 
 ```bash
-# Rollout with DQN policy
-poetry run python -m rocket_landing.utils.rollout --policy rllib_dqn_best --episodes 10
-
-# Rollout with PPO policy
-poetry run python -m rocket_landing.utils.rollout --policy rllib_ppo_best --episodes 10
-```
-
-Saves animated GIFs to `./gifs/`
-
-### Real-Time Training Monitoring with TensorBoard
-
-RLlib automatically logs training metrics to TensorBoard format. You can monitor training progress in real-time or review completed experiments.
-
-**Launch TensorBoard**
-
-```bash 
-# From project root directory
 poetry run tensorboard --logdir ray_results/
 ```
 
-Then open your browser and navigate to:
+Open in browser:
 
 ```
 http://localhost:6006
 ```
 
-**What You'll See**
-
-TensorBoard provides rich visualizations of your training run:
-
-**Scalars Tab**:
-
-- `episode_reward_mean:` Average reward per episode (main success metric)
-- `episode_len_mean:` Average episode length in timesteps
-- `num_env_steps_sampled_lifetime:` Total environment interactions
-- `num_episodes_lifetime:` Total episodes completed
-- `Loss metrics:` DQN loss, TD error, Q-values
-
-**Distributions Tab:**
-
-- Q-value distributions over time
-- Action selection frequencies
-- Reward distributions
+TensorBoard provides interactive visualizations that make it easier to monitor training dynamics and diagnose instability or divergence.
 
 ---
 
 ## Acknowledgments
 
-- **OpenAI Gymnasium**: Standard RL environment API
-- **Ray RLlib**: Scalable RL framework
-- **PyGame**: Visualization and rendering
-
----
+* Gymnasium for the RL environment API
+* Ray RLlib for scalable reinforcement learning
+* PyGame for rendering and visualization
