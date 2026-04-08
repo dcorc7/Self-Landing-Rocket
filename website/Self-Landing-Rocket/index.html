@@ -20,40 +20,6 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
-/* CSS for syntax highlighting */
-pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { line-height: 1.25; }
-pre > code.sourceCode > span:empty { height: 1.2em; }
-.sourceCode { overflow: visible; }
-code.sourceCode > span { color: inherit; text-decoration: inherit; }
-div.sourceCode { margin: 1em 0; }
-pre.sourceCode { margin: 0; }
-@media screen {
-div.sourceCode { overflow: auto; }
-}
-@media print {
-pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
-}
-pre.numberSource code
-  { counter-reset: source-line 0; }
-pre.numberSource code > span
-  { position: relative; left: -4em; counter-increment: source-line; }
-pre.numberSource code > span > a:first-child::before
-  { content: counter(source-line);
-    position: relative; left: -1em; text-align: right; vertical-align: baseline;
-    border: none; display: inline-block;
-    -webkit-touch-callout: none; -webkit-user-select: none;
-    -khtml-user-select: none; -moz-user-select: none;
-    -ms-user-select: none; user-select: none;
-    padding: 0 4px; width: 4em;
-  }
-pre.numberSource { margin-left: 3em;  padding-left: 4px; }
-div.sourceCode
-  {   }
-@media screen {
-pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
-}
 </style>
 
 
@@ -168,18 +134,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <ul>
   <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction">Introduction</a></li>
   <li><a href="#motivation" id="toc-motivation" class="nav-link" data-scroll-target="#motivation">Motivation</a></li>
-  <li><a href="#environment-details" id="toc-environment-details" class="nav-link" data-scroll-target="#environment-details">Environment Details</a>
-  <ul class="collapse">
-  <li><a href="#state-space-continuous" id="toc-state-space-continuous" class="nav-link" data-scroll-target="#state-space-continuous">State Space (Continuous)</a></li>
-  <li><a href="#action-space-discrete" id="toc-action-space-discrete" class="nav-link" data-scroll-target="#action-space-discrete">Action Space (Discrete)</a></li>
-  <li><a href="#physics" id="toc-physics" class="nav-link" data-scroll-target="#physics">Physics</a></li>
-  </ul></li>
-  <li><a href="#algorithms" id="toc-algorithms" class="nav-link" data-scroll-target="#algorithms">Algorithms</a>
-  <ul class="collapse">
-  <li><a href="#dqn-deep-q-network" id="toc-dqn-deep-q-network" class="nav-link" data-scroll-target="#dqn-deep-q-network">DQN (Deep Q-Network)</a></li>
-  <li><a href="#ppo-proximal-policy-optimization" id="toc-ppo-proximal-policy-optimization" class="nav-link" data-scroll-target="#ppo-proximal-policy-optimization">PPO (Proximal Policy Optimization)</a></li>
-  </ul></li>
-  <li><a href="#reward-function" id="toc-reward-function" class="nav-link" data-scroll-target="#reward-function">Reward Function</a></li>
   <li><a href="#github-repository" id="toc-github-repository" class="nav-link" data-scroll-target="#github-repository">GitHub Repository</a></li>
   </ul>
 </nav>
@@ -212,161 +166,24 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <section id="introduction" class="level2">
 <h2 class="anchored" data-anchor-id="introduction">Introduction</h2>
-<p>Autonomous rocket landing is one of the most demanding control problems in aerospace engineering. A rocket returning from flight must simultaneously manage its altitude, horizontal drift, orientation, and velocity, all in real time and under the unforgiving influence of gravity. SpaceX’s Falcon 9 demonstrated this is physically achievable; this project asks whether reinforcement learning can discover those same control strategies from scratch, through trial and error alone.</p>
-<p>Built around a custom 2D physics simulation using Gymnasium and rendered with PyGame, this project trains deep RL agents to execute soft landings on a designated pad. Training is powered by Ray RLlib, which provides scalable, distributed learning across both DQN and PPO algorithms. The result is an agent that learns — without human demonstration or hardcoded logic — to fire its engines at precisely the right moments to touch down safely.</p>
+<p>Rocket landing is a challenging nonlinear control problem. A vehicle descending under gravity must regulate position, velocity, and orientation simultaneously, while operating under actuator and fuel constraints. Small control errors compound quickly, making a stable touchdown difficult without precise feedback and coordination.</p>
+<p>This project explores whether reinforcement learning can learn that control strategy directly from interaction with a simulated environment. Using a custom 2D physics engine built with Gymnasium and rendered in PyGame, agents are trained to land a rocket upright and within a defined pad region. Training is performed with Ray RLlib using both DQN and PPO. The learned policies discover when to rotate, when to fire the main engine, and how to reduce velocity for a controlled landing without any hardcoded landing logic.</p>
 <hr>
 </section>
 <section id="motivation" class="level2">
 <h2 class="anchored" data-anchor-id="motivation">Motivation</h2>
-<p>Classical control methods like PID controllers or model predictive control require careful hand-tuning and rely on accurate physical models. Reinforcement learning offers a different path: given only a reward signal defining what a “good” landing looks like, an agent can discover effective strategies autonomously — and potentially generalize to conditions a human designer never anticipated.</p>
-<p>To achieve this, the project was built around four core design decisions:</p>
+<p>Reinforcement learning treats landing as a sequential decision problem. The agent observes the rocket’s full state, takes discrete thrust actions, and receives shaped rewards encouraging stability, fuel-aware control, and precise touchdown. Over many episodes, it learns a control policy purely from reward feedback.</p>
+<p>The project is built around four core design elements:</p>
 <ul>
-<li>A 6-dimensional continuous state space capturing position, velocity, angle, and angular velocity</li>
-<li>A shaped reward function that continuously penalizes instability and rewards controlled descent</li>
-<li>RLlib-based training using DQN and PPO, enabling fast iteration with production-grade algorithms</li>
-<li>A discrete action space (no-op, rotate left, main engine, rotate right) mirroring real thruster control logic</li>
+<li>A 7-dimensional continuous state space capturing position, velocity, angle, angular velocity, and remaining fuel<br>
+</li>
+<li>A shaped reward function with dense mid-air penalties and tiered landing bonuses<br>
+</li>
+<li>Distributed RLlib training pipelines for both DQN and PPO<br>
+</li>
+<li>A discrete thruster-based action space reflecting realistic actuation choices</li>
 </ul>
-<p>By shaping rewards around stability and precision rather than mere survival, the agent learns behaviors that resemble genuine flight discipline — staying upright, decelerating before contact, and homing in on the landing pad.</p>
-<hr>
-</section>
-<section id="environment-details" class="level2">
-<h2 class="anchored" data-anchor-id="environment-details">Environment Details</h2>
-<p>The environment is a custom Gymnasium implementation simulating 2D rigid-body rocket dynamics. At each timestep, the agent observes a 6-variable state vector and selects one of four discrete thrust actions. An episode ends when the rocket contacts the ground — either in a successful soft landing or a crash.</p>
-<section id="state-space-continuous" class="level3">
-<h3 class="anchored" data-anchor-id="state-space-continuous">State Space (Continuous)</h3>
-<table class="caption-top table">
-<thead>
-<tr class="header">
-<th>Variable</th>
-<th>Description</th>
-<th>Range</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td><code>x</code></td>
-<td>Horizontal position (normalized)</td>
-<td>[-1.0, 1.0]</td>
-</tr>
-<tr class="even">
-<td><code>y</code></td>
-<td>Vertical position (normalized)</td>
-<td>[0.0, 1.2]</td>
-</tr>
-<tr class="odd">
-<td><code>vx</code></td>
-<td>Horizontal velocity</td>
-<td>[-2.0, 2.0]</td>
-</tr>
-<tr class="even">
-<td><code>vy</code></td>
-<td>Vertical velocity</td>
-<td>[-2.0, 2.0]</td>
-</tr>
-<tr class="odd">
-<td><code>θ</code></td>
-<td>Angle from vertical</td>
-<td>[-π, π] radians</td>
-</tr>
-<tr class="even">
-<td><code>ω</code></td>
-<td>Angular velocity</td>
-<td>[-2.0, 2.0] rad/s</td>
-</tr>
-</tbody>
-</table>
-</section>
-<section id="action-space-discrete" class="level3">
-<h3 class="anchored" data-anchor-id="action-space-discrete">Action Space (Discrete)</h3>
-<table class="caption-top table">
-<thead>
-<tr class="header">
-<th>Action ID</th>
-<th>Description</th>
-<th>Effect</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>0</td>
-<td>No-op</td>
-<td>Coast/freefall</td>
-</tr>
-<tr class="even">
-<td>1</td>
-<td>Rotate left</td>
-<td>Apply counterclockwise torque</td>
-</tr>
-<tr class="odd">
-<td>2</td>
-<td>Main engine</td>
-<td>Fire thruster along rocket axis</td>
-</tr>
-<tr class="even">
-<td>3</td>
-<td>Rotate right</td>
-<td>Apply clockwise torque</td>
-</tr>
-</tbody>
-</table>
-</section>
-<section id="physics" class="level3">
-<h3 class="anchored" data-anchor-id="physics">Physics</h3>
-<p>The simulation uses simplified 2D rigid-body dynamics: constant downward gravity, main thrust applied along the rocket’s longitudinal axis, and angular torque for rotation control. Position and velocity are integrated each step, with the arena bounded horizontally to [-1.0, 1.0] and vertically to [0.0, 1.2].</p>
-<hr>
-</section>
-</section>
-<section id="algorithms" class="level2">
-<h2 class="anchored" data-anchor-id="algorithms">Algorithms</h2>
-<p>Training uses <strong>Ray RLlib</strong> — an industry-standard distributed RL library — to run two complementary algorithms. Both are applied to the same environment, enabling direct comparison of value-based versus policy-based approaches on this control task.</p>
-<section id="dqn-deep-q-network" class="level3">
-<h3 class="anchored" data-anchor-id="dqn-deep-q-network">DQN (Deep Q-Network)</h3>
-<ul>
-<li><strong>Type</strong>: Value-based, off-policy</li>
-<li><strong>How it works</strong>: Learns a Q-function estimating expected future reward for each action, then selects the action with the highest Q-value</li>
-<li><strong>Key features</strong>: Experience replay for sample efficiency, target network for training stability, Double Q-learning and dueling architecture via RLlib</li>
-<li><strong>Best for</strong>: Discrete action spaces where sample efficiency matters</li>
-</ul>
-</section>
-<section id="ppo-proximal-policy-optimization" class="level3">
-<h3 class="anchored" data-anchor-id="ppo-proximal-policy-optimization">PPO (Proximal Policy Optimization)</h3>
-<ul>
-<li><strong>Type</strong>: Policy-based, on-policy</li>
-<li><strong>How it works</strong>: Directly optimizes the policy using a clipped surrogate objective that prevents destructively large updates</li>
-<li><strong>Key features</strong>: Generalized Advantage Estimation (GAE), multiple parallel workers for on-policy sampling, automatic learning rate tuning</li>
-<li><strong>Best for</strong>: Stable training with minimal hyperparameter sensitivity</li>
-</ul>
-<p>Both algorithms are run through RLlib’s distributed infrastructure, which handles parallel environment sampling, checkpointing, and TensorBoard logging automatically.</p>
-<hr>
-</section>
-</section>
-<section id="reward-function" class="level2">
-<h2 class="anchored" data-anchor-id="reward-function">Reward Function</h2>
-<p>Reward shaping is central to the project. Rather than offering a sparse signal only at episode end, the agent receives continuous feedback every step — penalized for tilting, drifting off-center, and moving too fast. A large terminal bonus or penalty is applied on ground contact based on landing quality.</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Step reward — computed each timestep during flight</span></span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>reward <span class="op">=</span> <span class="fl">0.0</span></span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Penalize tilt — encourages staying upright</span></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>reward <span class="op">-=</span> <span class="fl">0.1</span> <span class="op">*</span> <span class="bu">abs</span>(angle)</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Penalize speed — encourages slow, controlled descent</span></span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>reward <span class="op">-=</span> <span class="fl">0.3</span> <span class="op">*</span> (<span class="bu">abs</span>(vx) <span class="op">+</span> <span class="bu">abs</span>(vy))</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Penalize horizontal offset — encourages centering over the pad</span></span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>reward <span class="op">-=</span> <span class="fl">0.2</span> <span class="op">*</span> <span class="bu">abs</span>(x)</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Time penalty — encourages efficient landings</span></span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>reward <span class="op">-=</span> <span class="fl">0.05</span></span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Terminal reward — applied on ground contact</span></span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> y <span class="op">&lt;=</span> <span class="fl">0.0</span>:</span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    soft_landing <span class="op">=</span> (</span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>        <span class="bu">abs</span>(x) <span class="op">&lt;</span> <span class="fl">0.1</span>       <span class="co"># centered on pad</span></span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>        <span class="kw">and</span> <span class="bu">abs</span>(vx) <span class="op">&lt;</span> <span class="fl">0.1</span>  <span class="co"># low lateral speed</span></span>
-<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>        <span class="kw">and</span> <span class="bu">abs</span>(vy) <span class="op">&lt;</span> <span class="fl">0.2</span>  <span class="co"># low vertical speed</span></span>
-<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>        <span class="kw">and</span> <span class="bu">abs</span>(angle) <span class="op">&lt;</span> <span class="fl">0.1</span>  <span class="co"># nearly upright</span></span>
-<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    reward <span class="op">+=</span> <span class="fl">100.0</span> <span class="cf">if</span> soft_landing <span class="cf">else</span> <span class="op">-</span><span class="fl">100.0</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>By combining structured reward shaping with modern deep RL algorithms, the agent learns coordinated behaviors such as stabilizing orientation early, correcting horizontal drift during descent, and reducing velocity near the ground before committing to landing.</p>
 <hr>
 </section>
 <section id="github-repository" class="level2">

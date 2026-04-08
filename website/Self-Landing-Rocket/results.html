@@ -132,9 +132,21 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">Table of Contents</h2>
    
   <ul>
-  <li><a href="#random-policy" id="toc-random-policy" class="nav-link active" data-scroll-target="#random-policy">Random Policy</a></li>
-  <li><a href="#deep-q-learning-networks-dqn" id="toc-deep-q-learning-networks-dqn" class="nav-link" data-scroll-target="#deep-q-learning-networks-dqn">Deep Q-Learning Networks (DQN)</a></li>
-  <li><a href="#proximal-policy-optimization-ppo" id="toc-proximal-policy-optimization-ppo" class="nav-link" data-scroll-target="#proximal-policy-optimization-ppo">Proximal Policy Optimization (PPO)</a></li>
+  <li><a href="#random-policy" id="toc-random-policy" class="nav-link active" data-scroll-target="#random-policy">Random Policy</a>
+  <ul class="collapse">
+  <li><a href="#observations" id="toc-observations" class="nav-link" data-scroll-target="#observations">Observations</a></li>
+  </ul></li>
+  <li><a href="#deep-q-learning-networks-dqn" id="toc-deep-q-learning-networks-dqn" class="nav-link" data-scroll-target="#deep-q-learning-networks-dqn">Deep Q-Learning Networks (DQN)</a>
+  <ul class="collapse">
+  <li><a href="#behavioral-results" id="toc-behavioral-results" class="nav-link" data-scroll-target="#behavioral-results">Behavioral Results</a></li>
+  <li><a href="#training-dynamics" id="toc-training-dynamics" class="nav-link" data-scroll-target="#training-dynamics">Training Dynamics</a></li>
+  </ul></li>
+  <li><a href="#proximal-policy-optimization-ppo" id="toc-proximal-policy-optimization-ppo" class="nav-link" data-scroll-target="#proximal-policy-optimization-ppo">Proximal Policy Optimization (PPO)</a>
+  <ul class="collapse">
+  <li><a href="#behavioral-results-1" id="toc-behavioral-results-1" class="nav-link" data-scroll-target="#behavioral-results-1">Behavioral Results</a></li>
+  <li><a href="#training-dynamics-1" id="toc-training-dynamics-1" class="nav-link" data-scroll-target="#training-dynamics-1">Training Dynamics</a></li>
+  </ul></li>
+  <li><a href="#comparative-analysis" id="toc-comparative-analysis" class="nav-link" data-scroll-target="#comparative-analysis">Comparative Analysis</a></li>
   <li><a href="#conclusion-future-work" id="toc-conclusion-future-work" class="nav-link" data-scroll-target="#conclusion-future-work">Conclusion &amp; Future Work</a>
   <ul class="collapse">
   <li><a href="#limitations" id="toc-limitations" class="nav-link" data-scroll-target="#limitations">Limitations</a></li>
@@ -169,6 +181,8 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
+<p>This section compares three control strategies in the custom rocket landing environment: a random policy baseline, Deep Q-Learning (DQN), and Proximal Policy Optimization (PPO). All agents were trained using Ray RLlib under identical environment dynamics and reward structure, allowing for direct behavioral and learning-curve comparisons.</p>
+<hr>
 <section id="random-policy" class="level2">
 <h2 class="anchored" data-anchor-id="random-policy">Random Policy</h2>
 <div class="quarto-figure quarto-figure-center">
@@ -177,7 +191,18 @@ ul.task-list li input[type="checkbox"] {
 <figcaption>Random Gif</figcaption>
 </figure>
 </div>
+<p>The random policy selects one of the four discrete actions uniformly at random at every timestep. It provides a baseline for evaluating whether learned behavior is meaningfully better than chance.</p>
+<section id="observations" class="level3">
+<h3 class="anchored" data-anchor-id="observations">Observations</h3>
+<ul>
+<li>The rocket frequently tumbles due to uncoordinated rotation actions.</li>
+<li>Thrust is applied inconsistently, often increasing instability rather than correcting it.</li>
+<li>Landings are almost always crashes, typically at high velocity or extreme angles.</li>
+<li>Episode rewards remain strongly negative due to cumulative tilt, velocity, and terminal crash penalties.</li>
+</ul>
+<p>This confirms that the environment is non-trivial. Stable landings require coordinated control over both translation and rotation, which random exploration alone cannot achieve.</p>
 <hr>
+</section>
 </section>
 <section id="deep-q-learning-networks-dqn" class="level2">
 <h2 class="anchored" data-anchor-id="deep-q-learning-networks-dqn">Deep Q-Learning Networks (DQN)</h2>
@@ -193,7 +218,29 @@ ul.task-list li input[type="checkbox"] {
 <figcaption>DQN Training Curves</figcaption>
 </figure>
 </div>
+<p>DQN learns an action-value function mapping each state to expected future reward for each discrete action. Through experience replay and target network stabilization, it gradually improves control behavior over training iterations.</p>
+<section id="behavioral-results" class="level3">
+<h3 class="anchored" data-anchor-id="behavioral-results">Behavioral Results</h3>
+<ul>
+<li>The agent learns to remain more upright during descent.</li>
+<li>Thruster firing becomes more purposeful, typically used to counteract excessive downward velocity.</li>
+<li>Horizontal drift is partially corrected, though not always precisely.</li>
+<li>Successful soft landings emerge after sufficient training, though with occasional instability.</li>
+</ul>
+<p>DQN demonstrates that value-based methods can solve this control problem despite the continuous state space. However, learned policies sometimes appear reactive rather than anticipatory, especially under higher angular momentum.</p>
+</section>
+<section id="training-dynamics" class="level3">
+<h3 class="anchored" data-anchor-id="training-dynamics">Training Dynamics</h3>
+<p>The DQN training curves show:</p>
+<ul>
+<li>Mean episode reward steadily increases over time.</li>
+<li>Early training is highly volatile due to exploratory behavior.</li>
+<li>As epsilon decays and Q-values stabilize, variance decreases.</li>
+<li>Convergence occurs once the agent reliably achieves soft landings in a majority of episodes.</li>
+</ul>
+<p>The learning curve reflects the typical DQN pattern: unstable early exploration followed by gradual policy refinement as replay memory accumulates diverse experiences.</p>
 <hr>
+</section>
 </section>
 <section id="proximal-policy-optimization-ppo" class="level2">
 <h2 class="anchored" data-anchor-id="proximal-policy-optimization-ppo">Proximal Policy Optimization (PPO)</h2>
@@ -209,18 +256,109 @@ ul.task-list li input[type="checkbox"] {
 <figcaption>PPO Training Curves</figcaption>
 </figure>
 </div>
+<p>PPO directly optimizes the policy using clipped gradient updates, improving stability compared to unconstrained policy gradient methods. Because it is on-policy, it relies on fresh trajectory rollouts collected each iteration.</p>
+<section id="behavioral-results-1" class="level3">
+<h3 class="anchored" data-anchor-id="behavioral-results-1">Behavioral Results</h3>
+<ul>
+<li>The rocket maintains near-vertical orientation throughout descent.</li>
+<li>Engine burns are smoother and more anticipatory than DQN.</li>
+<li>Horizontal corrections are applied earlier and more consistently.</li>
+<li>Soft landings are more repeatable and visually controlled.</li>
+</ul>
+<p>Compared to DQN, PPO produces smoother control trajectories. The descent often resembles a disciplined landing sequence: stabilize orientation, reduce vertical speed, correct lateral offset, and gently settle onto the pad.</p>
+</section>
+<section id="training-dynamics-1" class="level3">
+<h3 class="anchored" data-anchor-id="training-dynamics-1">Training Dynamics</h3>
+<p>The PPO training curves show:</p>
+<ul>
+<li>Faster reward growth during early training.</li>
+<li>Lower variance between iterations compared to DQN.</li>
+<li>More stable convergence once landing strategies are discovered.</li>
+<li>Consistent high rewards once the agent internalizes the shaped reward structure.</li>
+</ul>
+<p>Because PPO updates the policy directly while constraining step size, it tends to avoid the oscillatory value overestimation sometimes observed in Q-learning.</p>
+<hr>
+</section>
+</section>
+<section id="comparative-analysis" class="level1">
+<h1>Comparative Analysis</h1>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Metric</th>
+<th>Random</th>
+<th>DQN</th>
+<th>PPO</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Stable Orientation</td>
+<td>Rare</td>
+<td>Often</td>
+<td>Consistently</td>
+</tr>
+<tr class="even">
+<td>Horizontal Correction</td>
+<td>None</td>
+<td>Partial</td>
+<td>Strong</td>
+</tr>
+<tr class="odd">
+<td>Soft Landing Frequency</td>
+<td>~0%</td>
+<td>Moderate</td>
+<td>High</td>
+</tr>
+<tr class="even">
+<td>Training Stability</td>
+<td>N/A</td>
+<td>Moderate</td>
+<td>High</td>
+</tr>
+</tbody>
+</table>
+<p>Both DQN and PPO successfully learn to land the rocket, demonstrating that reinforcement learning can discover complex control strategies without explicit programming.</p>
+<p>However, qualitative differences emerge:</p>
+<ul>
+<li><strong>DQN</strong> is sample-efficient and effective for discrete action spaces but can exhibit reactive corrections and higher training variance.</li>
+<li><strong>PPO</strong> produces smoother trajectories and more stable learning, likely due to its direct policy optimization and clipped objective.</li>
+</ul>
 <hr>
 </section>
 <section id="conclusion-future-work" class="level1">
 <h1>Conclusion &amp; Future Work</h1>
+<p>This project demonstrates that deep reinforcement learning can autonomously learn stable rocket landing behavior from scratch within a simplified 2D physics simulation. Both value-based and policy-based methods achieve soft landings, validating the effectiveness of shaped reward design and distributed RLlib training.</p>
+<p>The results highlight three key insights:</p>
+<ol type="1">
+<li>Reward shaping strongly influences flight discipline.</li>
+<li>Policy-based methods can yield smoother control in continuous-state dynamics.</li>
+<li>Stable learning emerges from combining structured rewards with modern RL algorithms.</li>
+</ol>
 <hr>
 <section id="limitations" class="level2">
 <h2 class="anchored" data-anchor-id="limitations">Limitations</h2>
+<p>Despite successful learning, several limitations remain:</p>
+<ul>
+<li>The simulation is simplified to 2D and omits aerodynamic drag and stochastic disturbances.</li>
+<li>The action space is discrete rather than continuous thrust modulation.</li>
+<li>Generalization to unseen initial conditions was not extensively evaluated.</li>
+<li>Reward shaping may bias the agent toward specific landing styles rather than optimal fuel efficiency.</li>
+</ul>
+<p>Additionally, performance is sensitive to hyperparameters such as learning rate, exploration schedule, and reward scaling.</p>
 <hr>
 </section>
 <section id="future-directions" class="level2">
 <h2 class="anchored" data-anchor-id="future-directions">Future Directions</h2>
-<hr>
+<p>Several extensions could further strengthen the project:</p>
+<ul>
+<li>Transition to a continuous action space using algorithms such as SAC or TD3.</li>
+<li>Introduce wind disturbances or randomized initial conditions to test robustness.</li>
+<li>Add fuel consumption penalties to encourage energy-efficient landings.</li>
+<li>Extend the environment to 3D dynamics.</li>
+<li>Incorporate curriculum learning to gradually increase task difficulty.</li>
+</ul>
+<p>This project provides a foundation for exploring more realistic autonomous control problems and demonstrates how reinforcement learning can approximate sophisticated aerospace maneuvers through trial-and-error optimization alone.</p>
 
 
 </section>

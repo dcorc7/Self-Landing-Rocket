@@ -132,8 +132,37 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">Table of Contents</h2>
    
   <ul>
-  <li><a href="#deep-q-learning-netowrks-dqn" id="toc-deep-q-learning-netowrks-dqn" class="nav-link active" data-scroll-target="#deep-q-learning-netowrks-dqn">Deep Q-Learning Netowrks (DQN)</a></li>
-  <li><a href="#proximal-policyoptimization-ppo" id="toc-proximal-policyoptimization-ppo" class="nav-link" data-scroll-target="#proximal-policyoptimization-ppo">Proximal PolicyOptimization (PPO)</a></li>
+  <li><a href="#environment-details" id="toc-environment-details" class="nav-link active" data-scroll-target="#environment-details">Environment Details</a>
+  <ul class="collapse">
+  <li><a href="#physics-model" id="toc-physics-model" class="nav-link" data-scroll-target="#physics-model">Physics Model</a>
+  <ul class="collapse">
+  <li><a href="#dynamics" id="toc-dynamics" class="nav-link" data-scroll-target="#dynamics">Dynamics</a></li>
+  </ul></li>
+  <li><a href="#state-space-continuous" id="toc-state-space-continuous" class="nav-link" data-scroll-target="#state-space-continuous">State Space (Continuous)</a></li>
+  <li><a href="#action-space-discrete" id="toc-action-space-discrete" class="nav-link" data-scroll-target="#action-space-discrete">Action Space (Discrete)</a></li>
+  </ul></li>
+  <li><a href="#reward-function" id="toc-reward-function" class="nav-link" data-scroll-target="#reward-function">Reward Function</a>
+  <ul class="collapse">
+  <li><a href="#per-step-reward-components" id="toc-per-step-reward-components" class="nav-link" data-scroll-target="#per-step-reward-components">Per-Step Reward Components</a></li>
+  <li><a href="#near-ground-shaping-y-0.3" id="toc-near-ground-shaping-y-0.3" class="nav-link" data-scroll-target="#near-ground-shaping-y-0.3">Near-Ground Shaping (y &lt; 0.3)</a></li>
+  <li><a href="#terminal-conditions" id="toc-terminal-conditions" class="nav-link" data-scroll-target="#terminal-conditions">Terminal Conditions</a></li>
+  </ul></li>
+  <li><a href="#algorithms" id="toc-algorithms" class="nav-link" data-scroll-target="#algorithms">Algorithms</a>
+  <ul class="collapse">
+  <li><a href="#deep-q-network-dqn" id="toc-deep-q-network-dqn" class="nav-link" data-scroll-target="#deep-q-network-dqn">Deep Q-Network (DQN)</a>
+  <ul class="collapse">
+  <li><a href="#architecture-and-features" id="toc-architecture-and-features" class="nav-link" data-scroll-target="#architecture-and-features">Architecture and Features</a></li>
+  <li><a href="#key-hyperparameters" id="toc-key-hyperparameters" class="nav-link" data-scroll-target="#key-hyperparameters">Key Hyperparameters</a></li>
+  <li><a href="#stopping-criteria" id="toc-stopping-criteria" class="nav-link" data-scroll-target="#stopping-criteria">Stopping Criteria</a></li>
+  </ul></li>
+  <li><a href="#proximal-policy-optimization-ppo" id="toc-proximal-policy-optimization-ppo" class="nav-link" data-scroll-target="#proximal-policy-optimization-ppo">Proximal Policy Optimization (PPO)</a>
+  <ul class="collapse">
+  <li><a href="#architecture-and-features-1" id="toc-architecture-and-features-1" class="nav-link" data-scroll-target="#architecture-and-features-1">Architecture and Features</a></li>
+  <li><a href="#key-hyperparameters-1" id="toc-key-hyperparameters-1" class="nav-link" data-scroll-target="#key-hyperparameters-1">Key Hyperparameters</a></li>
+  <li><a href="#stopping-criteria-1" id="toc-stopping-criteria-1" class="nav-link" data-scroll-target="#stopping-criteria-1">Stopping Criteria</a></li>
+  </ul></li>
+  </ul></li>
+  <li><a href="#training-infrastructure" id="toc-training-infrastructure" class="nav-link" data-scroll-target="#training-infrastructure">Training Infrastructure</a></li>
   </ul>
 </nav>
 </nav>
@@ -163,13 +192,307 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
+<section id="environment-details" class="level1">
+<h1>Environment Details</h1>
+<p>The environment is a custom Gymnasium implementation simulating 2D rigid-body rocket dynamics with fuel constraints and rotational control. At each timestep, the agent observes a 7-dimensional continuous state vector and selects one of four discrete thrust actions. An episode terminates if the rocket lands, crashes, or exits the horizontal boundary.</p>
+<p>The environment follows the Gymnasium API and supports both human rendering via PyGame and RGB array output for video generation.</p>
 <hr>
-<section id="deep-q-learning-netowrks-dqn" class="level2">
-<h2 class="anchored" data-anchor-id="deep-q-learning-netowrks-dqn">Deep Q-Learning Netowrks (DQN)</h2>
+<section id="physics-model" class="level2">
+<h2 class="anchored" data-anchor-id="physics-model">Physics Model</h2>
+<p>The simulation uses simplified 2D rigid-body dynamics with the following constants:</p>
+<ul>
+<li>Gravity: <code>-0.05</code></li>
+<li>Main engine thrust: <code>0.20</code></li>
+<li>Angular thrust: <code>0.05</code></li>
+<li>Angular damping: <code>0.99</code> multiplier per step</li>
+<li>Timestep: <code>dt = 0.05</code></li>
+<li>Horizontal boundary: <code>|x| ≤ 1.5</code></li>
+<li>Vertical ceiling: <code>y ≤ 1.95</code></li>
+</ul>
+<section id="dynamics" class="level3">
+<h3 class="anchored" data-anchor-id="dynamics">Dynamics</h3>
+<p>At each step:</p>
+<ul>
+<li>Gravity continuously accelerates the rocket downward.</li>
+<li>The main engine applies thrust along the rocket’s longitudinal axis.</li>
+<li>Rotation actions apply angular thrust, modifying angular velocity.</li>
+<li>Angular velocity is slightly damped each step for stability.</li>
+<li>Position and angle are integrated forward using simple Euler updates.</li>
+<li>Fuel decreases by <code>0.01</code> per main engine burn and is bounded to <code>[0, 1]</code>.</li>
+</ul>
+<p>The rocket’s angle is wrapped to <code>[-π, π]</code> to maintain numerical stability.</p>
 <hr>
 </section>
-<section id="proximal-policyoptimization-ppo" class="level2">
-<h2 class="anchored" data-anchor-id="proximal-policyoptimization-ppo">Proximal PolicyOptimization (PPO)</h2>
+</section>
+<section id="state-space-continuous" class="level2">
+<h2 class="anchored" data-anchor-id="state-space-continuous">State Space (Continuous)</h2>
+<p>The observation vector consists of seven variables:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Variable</th>
+<th>Description</th>
+<th>Range</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>x</code></td>
+<td>Horizontal position</td>
+<td>[-1.5, 1.5]</td>
+</tr>
+<tr class="even">
+<td><code>y</code></td>
+<td>Vertical position</td>
+<td>[-1.95, 1.95]</td>
+</tr>
+<tr class="odd">
+<td><code>vx</code></td>
+<td>Horizontal velocity</td>
+<td>[-2.0, 2.0]</td>
+</tr>
+<tr class="even">
+<td><code>vy</code></td>
+<td>Vertical velocity</td>
+<td>[-2.0, 2.0]</td>
+</tr>
+<tr class="odd">
+<td><code>θ</code></td>
+<td>Angle from vertical</td>
+<td>[-π, π]</td>
+</tr>
+<tr class="even">
+<td><code>ω</code></td>
+<td>Angular velocity</td>
+<td>[-2.0, 2.0]</td>
+</tr>
+<tr class="odd">
+<td><code>fuel</code></td>
+<td>Remaining fuel fraction</td>
+<td>[0.0, 1.0]</td>
+</tr>
+</tbody>
+</table>
+<p>Initial conditions are randomized at reset:</p>
+<ul>
+<li><code>x ∈ [-0.5, 0.5]</code></li>
+<li><code>y ∈ [0.8, 1.2]</code></li>
+<li><code>θ ∈ [-0.3, 0.3]</code></li>
+<li>Velocities initialized to zero</li>
+<li><code>fuel = 1.0</code></li>
+</ul>
+<p>This randomization ensures the agent must generalize across multiple initial configurations.</p>
+<hr>
+</section>
+<section id="action-space-discrete" class="level2">
+<h2 class="anchored" data-anchor-id="action-space-discrete">Action Space (Discrete)</h2>
+<p>The agent selects one of four discrete actions:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Action ID</th>
+<th>Description</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0</td>
+<td>No-op</td>
+<td>Freefall</td>
+</tr>
+<tr class="even">
+<td>1</td>
+<td>Rotate left</td>
+<td>Increase angular velocity</td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td>Main engine</td>
+<td>Apply thrust along rocket axis and consume fuel</td>
+</tr>
+<tr class="even">
+<td>3</td>
+<td>Rotate right</td>
+<td>Decrease angular velocity</td>
+</tr>
+</tbody>
+</table>
+<p>Rotation affects angular velocity directly. The main engine modifies both horizontal and vertical velocity components based on the current rocket angle.</p>
+<hr>
+</section>
+</section>
+<section id="reward-function" class="level1">
+<h1>Reward Function</h1>
+<p>The reward function combines dense shaping with structured terminal bonuses to encourage stable, controlled descent.</p>
+<section id="per-step-reward-components" class="level2">
+<h2 class="anchored" data-anchor-id="per-step-reward-components">Per-Step Reward Components</h2>
+<p>At every timestep:</p>
+<ul>
+<li>Penalize tilt using squared angle:
+<ul>
+<li><code>-0.15 * angle^2</code></li>
+</ul></li>
+<li>Penalize angular velocity:
+<ul>
+<li><code>-0.05 * |ω|</code></li>
+</ul></li>
+<li>Penalize horizontal drift:
+<ul>
+<li><code>-0.3 * |x|</code></li>
+</ul></li>
+<li>Penalize overall speed using squared velocity:
+<ul>
+<li><code>-0.2 * (vx^2 + vy^2)</code></li>
+</ul></li>
+<li>Encourage descent:
+<ul>
+<li><code>+0.1 * (1.0 - y)</code></li>
+</ul></li>
+<li>Apply small survival penalty:
+<ul>
+<li><code>-0.05</code></li>
+</ul></li>
+</ul>
+</section>
+<section id="near-ground-shaping-y-0.3" class="level2">
+<h2 class="anchored" data-anchor-id="near-ground-shaping-y-0.3">Near-Ground Shaping (y &lt; 0.3)</h2>
+<p>Additional shaping encourages precise landings:</p>
+<ul>
+<li>Reward slow vertical speed</li>
+<li>Reward low horizontal velocity</li>
+<li>Reward upright orientation</li>
+</ul>
+<p>This creates a structured learning signal that transitions from general stabilization mid-air to precision control near the landing pad.</p>
+</section>
+<section id="terminal-conditions" class="level2">
+<h2 class="anchored" data-anchor-id="terminal-conditions">Terminal Conditions</h2>
+<p>An episode terminates if:</p>
+<ol type="1">
+<li>The rocket exits horizontal bounds (<code>|x| &gt; 1.5</code>)
+<ul>
+<li>Reward: <code>-50</code></li>
+</ul></li>
+<li>The rocket contacts the ground (<code>y ≤ 0</code>)</li>
+</ol>
+<p>Landing outcomes:</p>
+<ul>
+<li><strong>Soft landing</strong>
+<ul>
+<li><code>|x| &lt; 0.1</code></li>
+<li><code>|vx| &lt; 0.1</code></li>
+<li><code>|vy| &lt; 0.2</code></li>
+<li><code>|angle| &lt; 0.1</code></li>
+<li>Reward: <code>+200</code></li>
+</ul></li>
+<li><strong>Near landing</strong>
+<ul>
+<li>Relaxed thresholds</li>
+<li>Reward: <code>+75</code></li>
+</ul></li>
+<li><strong>Crash</strong>
+<ul>
+<li>Reward: <code>-100</code></li>
+</ul></li>
+</ul>
+<p>This tiered reward structure improves learning stability compared to purely binary success signals.</p>
+<hr>
+</section>
+</section>
+<section id="algorithms" class="level1">
+<h1>Algorithms</h1>
+<p>Training uses Ray RLlib with the PyTorch backend. The environment is registered as <code>"RocketLanding-v0"</code> and trained using distributed environment runners.</p>
+<p>All experiments log:</p>
+<ul>
+<li>Mean episode return</li>
+<li>Mean episode length</li>
+<li>Periodic checkpoints</li>
+<li>Best checkpoint based on mean episode return</li>
+</ul>
+<p>Training curves are generated automatically after tuning completes.</p>
+<hr>
+<section id="deep-q-network-dqn" class="level2">
+<h2 class="anchored" data-anchor-id="deep-q-network-dqn">Deep Q-Network (DQN)</h2>
+<p><strong>Type:</strong> Off-policy, value-based</p>
+<section id="architecture-and-features" class="level3">
+<h3 class="anchored" data-anchor-id="architecture-and-features">Architecture and Features</h3>
+<ul>
+<li>Double Q-learning</li>
+<li>Dueling network architecture</li>
+<li>Experience replay buffer (capacity 50,000)</li>
+<li>Target network updates every 500 steps</li>
+</ul>
+</section>
+<section id="key-hyperparameters" class="level3">
+<h3 class="anchored" data-anchor-id="key-hyperparameters">Key Hyperparameters</h3>
+<ul>
+<li><code>gamma = 0.99</code></li>
+<li><code>lr = 1e-3</code></li>
+<li><code>train_batch_size = 3000</code></li>
+<li>6 environment runners × 4 environments each</li>
+</ul>
+</section>
+<section id="stopping-criteria" class="level3">
+<h3 class="anchored" data-anchor-id="stopping-criteria">Stopping Criteria</h3>
+<p>Training stops at:</p>
+<ul>
+<li>150 iterations, or</li>
+<li>Mean episode return ≥ 150</li>
+</ul>
+<p>The best-performing checkpoint (based on episode return) is automatically saved and exported for evaluation and visualization.</p>
+<hr>
+</section>
+</section>
+<section id="proximal-policy-optimization-ppo" class="level2">
+<h2 class="anchored" data-anchor-id="proximal-policy-optimization-ppo">Proximal Policy Optimization (PPO)</h2>
+<p><strong>Type:</strong> On-policy, policy-gradient</p>
+<section id="architecture-and-features-1" class="level3">
+<h3 class="anchored" data-anchor-id="architecture-and-features-1">Architecture and Features</h3>
+<ul>
+<li>Clipped objective (<code>clip_param = 0.2</code>)</li>
+<li>Generalized Advantage Estimation</li>
+<li>Entropy regularization (<code>entropy_coeff = 0.01</code>)</li>
+<li>Value loss coefficient (<code>vf_loss_coeff = 0.5</code>)</li>
+</ul>
+</section>
+<section id="key-hyperparameters-1" class="level3">
+<h3 class="anchored" data-anchor-id="key-hyperparameters-1">Key Hyperparameters</h3>
+<ul>
+<li><code>gamma = 0.99</code></li>
+<li><code>lr = 1e-4</code></li>
+<li><code>train_batch_size = 6000</code></li>
+<li><code>minibatch_size = 128</code></li>
+<li><code>num_epochs = 10</code></li>
+<li>8 environment runners × 4 environments each</li>
+</ul>
+</section>
+<section id="stopping-criteria-1" class="level3">
+<h3 class="anchored" data-anchor-id="stopping-criteria-1">Stopping Criteria</h3>
+<p>Training stops at:</p>
+<ul>
+<li>200 iterations, or</li>
+<li>Mean episode return ≥ 175</li>
+</ul>
+<p>As with DQN, the best checkpoint is automatically selected and exported.</p>
+<hr>
+</section>
+</section>
+</section>
+<section id="training-infrastructure" class="level1">
+<h1>Training Infrastructure</h1>
+<p>Both algorithms use Ray Tune for:</p>
+<ul>
+<li>Distributed rollout collection</li>
+<li>Periodic checkpointing</li>
+<li>Automatic metric tracking</li>
+<li>Best model selection</li>
+</ul>
+<p>After training:</p>
+<ul>
+<li>Episode return and episode length curves are saved as PNG files.</li>
+<li>The highest-performing policy checkpoint is copied into a dedicated <code>policies/</code> directory for deployment and visualization.</li>
+</ul>
+<p>This pipeline ensures reproducibility, scalability, and clean separation between environment logic, training configuration, and evaluation artifacts.</p>
 
 
 </section>

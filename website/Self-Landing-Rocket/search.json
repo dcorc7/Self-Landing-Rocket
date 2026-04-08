@@ -4,84 +4,63 @@
     "href": "results.html",
     "title": "Results",
     "section": "",
-    "text": "Random Gif"
+    "text": "This section compares three control strategies in the custom rocket landing environment: a random policy baseline, Deep Q-Learning (DQN), and Proximal Policy Optimization (PPO). All agents were trained using Ray RLlib under identical environment dynamics and reward structure, allowing for direct behavioral and learning-curve comparisons."
   },
   {
     "objectID": "results.html#random-policy",
     "href": "results.html#random-policy",
     "title": "Results",
-    "section": "",
-    "text": "Random Gif"
+    "section": "Random Policy",
+    "text": "Random Policy\n\n\n\nRandom Gif\n\n\nThe random policy selects one of the four discrete actions uniformly at random at every timestep. It provides a baseline for evaluating whether learned behavior is meaningfully better than chance.\n\nObservations\n\nThe rocket frequently tumbles due to uncoordinated rotation actions.\nThrust is applied inconsistently, often increasing instability rather than correcting it.\nLandings are almost always crashes, typically at high velocity or extreme angles.\nEpisode rewards remain strongly negative due to cumulative tilt, velocity, and terminal crash penalties.\n\nThis confirms that the environment is non-trivial. Stable landings require coordinated control over both translation and rotation, which random exploration alone cannot achieve."
   },
   {
     "objectID": "results.html#deep-q-learning-networks-dqn",
     "href": "results.html#deep-q-learning-networks-dqn",
     "title": "Results",
     "section": "Deep Q-Learning Networks (DQN)",
-    "text": "Deep Q-Learning Networks (DQN)\n\n\n\nDQN Gif\n\n\n\n\n\nDQN Training Curves"
+    "text": "Deep Q-Learning Networks (DQN)\n\n\n\nDQN Gif\n\n\n\n\n\nDQN Training Curves\n\n\nDQN learns an action-value function mapping each state to expected future reward for each discrete action. Through experience replay and target network stabilization, it gradually improves control behavior over training iterations.\n\nBehavioral Results\n\nThe agent learns to remain more upright during descent.\nThruster firing becomes more purposeful, typically used to counteract excessive downward velocity.\nHorizontal drift is partially corrected, though not always precisely.\nSuccessful soft landings emerge after sufficient training, though with occasional instability.\n\nDQN demonstrates that value-based methods can solve this control problem despite the continuous state space. However, learned policies sometimes appear reactive rather than anticipatory, especially under higher angular momentum.\n\n\nTraining Dynamics\nThe DQN training curves show:\n\nMean episode reward steadily increases over time.\nEarly training is highly volatile due to exploratory behavior.\nAs epsilon decays and Q-values stabilize, variance decreases.\nConvergence occurs once the agent reliably achieves soft landings in a majority of episodes.\n\nThe learning curve reflects the typical DQN pattern: unstable early exploration followed by gradual policy refinement as replay memory accumulates diverse experiences."
   },
   {
     "objectID": "results.html#proximal-policy-optimization-ppo",
     "href": "results.html#proximal-policy-optimization-ppo",
     "title": "Results",
     "section": "Proximal Policy Optimization (PPO)",
-    "text": "Proximal Policy Optimization (PPO)\n\n\n\nPPO Gif\n\n\n\n\n\nPPO Training Curves"
+    "text": "Proximal Policy Optimization (PPO)\n\n\n\nPPO Gif\n\n\n\n\n\nPPO Training Curves\n\n\nPPO directly optimizes the policy using clipped gradient updates, improving stability compared to unconstrained policy gradient methods. Because it is on-policy, it relies on fresh trajectory rollouts collected each iteration.\n\nBehavioral Results\n\nThe rocket maintains near-vertical orientation throughout descent.\nEngine burns are smoother and more anticipatory than DQN.\nHorizontal corrections are applied earlier and more consistently.\nSoft landings are more repeatable and visually controlled.\n\nCompared to DQN, PPO produces smoother control trajectories. The descent often resembles a disciplined landing sequence: stabilize orientation, reduce vertical speed, correct lateral offset, and gently settle onto the pad.\n\n\nTraining Dynamics\nThe PPO training curves show:\n\nFaster reward growth during early training.\nLower variance between iterations compared to DQN.\nMore stable convergence once landing strategies are discovered.\nConsistent high rewards once the agent internalizes the shaped reward structure.\n\nBecause PPO updates the policy directly while constraining step size, it tends to avoid the oscillatory value overestimation sometimes observed in Q-learning."
   },
   {
     "objectID": "results.html#limitations",
     "href": "results.html#limitations",
     "title": "Results",
     "section": "Limitations",
-    "text": "Limitations"
+    "text": "Limitations\nDespite successful learning, several limitations remain:\n\nThe simulation is simplified to 2D and omits aerodynamic drag and stochastic disturbances.\nThe action space is discrete rather than continuous thrust modulation.\nGeneralization to unseen initial conditions was not extensively evaluated.\nReward shaping may bias the agent toward specific landing styles rather than optimal fuel efficiency.\n\nAdditionally, performance is sensitive to hyperparameters such as learning rate, exploration schedule, and reward scaling."
   },
   {
     "objectID": "results.html#future-directions",
     "href": "results.html#future-directions",
     "title": "Results",
     "section": "Future Directions",
-    "text": "Future Directions"
+    "text": "Future Directions\nSeveral extensions could further strengthen the project:\n\nTransition to a continuous action space using algorithms such as SAC or TD3.\nIntroduce wind disturbances or randomized initial conditions to test robustness.\nAdd fuel consumption penalties to encourage energy-efficient landings.\nExtend the environment to 3D dynamics.\nIncorporate curriculum learning to gradually increase task difficulty.\n\nThis project provides a foundation for exploring more realistic autonomous control problems and demonstrates how reinforcement learning can approximate sophisticated aerospace maneuvers through trial-and-error optimization alone."
   },
   {
     "objectID": "index.html",
     "href": "index.html",
     "title": "Self Landing Rocket Using Reinforcement Learning",
     "section": "",
-    "text": "Autonomous rocket landing is one of the most demanding control problems in aerospace engineering. A rocket returning from flight must simultaneously manage its altitude, horizontal drift, orientation, and velocity, all in real time and under the unforgiving influence of gravity. SpaceX’s Falcon 9 demonstrated this is physically achievable; this project asks whether reinforcement learning can discover those same control strategies from scratch, through trial and error alone.\nBuilt around a custom 2D physics simulation using Gymnasium and rendered with PyGame, this project trains deep RL agents to execute soft landings on a designated pad. Training is powered by Ray RLlib, which provides scalable, distributed learning across both DQN and PPO algorithms. The result is an agent that learns — without human demonstration or hardcoded logic — to fire its engines at precisely the right moments to touch down safely."
+    "text": "Rocket landing is a challenging nonlinear control problem. A vehicle descending under gravity must regulate position, velocity, and orientation simultaneously, while operating under actuator and fuel constraints. Small control errors compound quickly, making a stable touchdown difficult without precise feedback and coordination.\nThis project explores whether reinforcement learning can learn that control strategy directly from interaction with a simulated environment. Using a custom 2D physics engine built with Gymnasium and rendered in PyGame, agents are trained to land a rocket upright and within a defined pad region. Training is performed with Ray RLlib using both DQN and PPO. The learned policies discover when to rotate, when to fire the main engine, and how to reduce velocity for a controlled landing without any hardcoded landing logic."
   },
   {
     "objectID": "index.html#introduction",
     "href": "index.html#introduction",
     "title": "Self Landing Rocket Using Reinforcement Learning",
     "section": "",
-    "text": "Autonomous rocket landing is one of the most demanding control problems in aerospace engineering. A rocket returning from flight must simultaneously manage its altitude, horizontal drift, orientation, and velocity, all in real time and under the unforgiving influence of gravity. SpaceX’s Falcon 9 demonstrated this is physically achievable; this project asks whether reinforcement learning can discover those same control strategies from scratch, through trial and error alone.\nBuilt around a custom 2D physics simulation using Gymnasium and rendered with PyGame, this project trains deep RL agents to execute soft landings on a designated pad. Training is powered by Ray RLlib, which provides scalable, distributed learning across both DQN and PPO algorithms. The result is an agent that learns — without human demonstration or hardcoded logic — to fire its engines at precisely the right moments to touch down safely."
+    "text": "Rocket landing is a challenging nonlinear control problem. A vehicle descending under gravity must regulate position, velocity, and orientation simultaneously, while operating under actuator and fuel constraints. Small control errors compound quickly, making a stable touchdown difficult without precise feedback and coordination.\nThis project explores whether reinforcement learning can learn that control strategy directly from interaction with a simulated environment. Using a custom 2D physics engine built with Gymnasium and rendered in PyGame, agents are trained to land a rocket upright and within a defined pad region. Training is performed with Ray RLlib using both DQN and PPO. The learned policies discover when to rotate, when to fire the main engine, and how to reduce velocity for a controlled landing without any hardcoded landing logic."
   },
   {
     "objectID": "index.html#motivation",
     "href": "index.html#motivation",
     "title": "Self Landing Rocket Using Reinforcement Learning",
     "section": "Motivation",
-    "text": "Motivation\nClassical control methods like PID controllers or model predictive control require careful hand-tuning and rely on accurate physical models. Reinforcement learning offers a different path: given only a reward signal defining what a “good” landing looks like, an agent can discover effective strategies autonomously — and potentially generalize to conditions a human designer never anticipated.\nTo achieve this, the project was built around four core design decisions:\n\nA 6-dimensional continuous state space capturing position, velocity, angle, and angular velocity\nA shaped reward function that continuously penalizes instability and rewards controlled descent\nRLlib-based training using DQN and PPO, enabling fast iteration with production-grade algorithms\nA discrete action space (no-op, rotate left, main engine, rotate right) mirroring real thruster control logic\n\nBy shaping rewards around stability and precision rather than mere survival, the agent learns behaviors that resemble genuine flight discipline — staying upright, decelerating before contact, and homing in on the landing pad."
-  },
-  {
-    "objectID": "index.html#environment-details",
-    "href": "index.html#environment-details",
-    "title": "Self Landing Rocket Using Reinforcement Learning",
-    "section": "Environment Details",
-    "text": "Environment Details\nThe environment is a custom Gymnasium implementation simulating 2D rigid-body rocket dynamics. At each timestep, the agent observes a 6-variable state vector and selects one of four discrete thrust actions. An episode ends when the rocket contacts the ground — either in a successful soft landing or a crash.\n\nState Space (Continuous)\n\n\n\nVariable\nDescription\nRange\n\n\n\n\nx\nHorizontal position (normalized)\n[-1.0, 1.0]\n\n\ny\nVertical position (normalized)\n[0.0, 1.2]\n\n\nvx\nHorizontal velocity\n[-2.0, 2.0]\n\n\nvy\nVertical velocity\n[-2.0, 2.0]\n\n\nθ\nAngle from vertical\n[-π, π] radians\n\n\nω\nAngular velocity\n[-2.0, 2.0] rad/s\n\n\n\n\n\nAction Space (Discrete)\n\n\n\nAction ID\nDescription\nEffect\n\n\n\n\n0\nNo-op\nCoast/freefall\n\n\n1\nRotate left\nApply counterclockwise torque\n\n\n2\nMain engine\nFire thruster along rocket axis\n\n\n3\nRotate right\nApply clockwise torque\n\n\n\n\n\nPhysics\nThe simulation uses simplified 2D rigid-body dynamics: constant downward gravity, main thrust applied along the rocket’s longitudinal axis, and angular torque for rotation control. Position and velocity are integrated each step, with the arena bounded horizontally to [-1.0, 1.0] and vertically to [0.0, 1.2]."
-  },
-  {
-    "objectID": "index.html#algorithms",
-    "href": "index.html#algorithms",
-    "title": "Self Landing Rocket Using Reinforcement Learning",
-    "section": "Algorithms",
-    "text": "Algorithms\nTraining uses Ray RLlib — an industry-standard distributed RL library — to run two complementary algorithms. Both are applied to the same environment, enabling direct comparison of value-based versus policy-based approaches on this control task.\n\nDQN (Deep Q-Network)\n\nType: Value-based, off-policy\nHow it works: Learns a Q-function estimating expected future reward for each action, then selects the action with the highest Q-value\nKey features: Experience replay for sample efficiency, target network for training stability, Double Q-learning and dueling architecture via RLlib\nBest for: Discrete action spaces where sample efficiency matters\n\n\n\nPPO (Proximal Policy Optimization)\n\nType: Policy-based, on-policy\nHow it works: Directly optimizes the policy using a clipped surrogate objective that prevents destructively large updates\nKey features: Generalized Advantage Estimation (GAE), multiple parallel workers for on-policy sampling, automatic learning rate tuning\nBest for: Stable training with minimal hyperparameter sensitivity\n\nBoth algorithms are run through RLlib’s distributed infrastructure, which handles parallel environment sampling, checkpointing, and TensorBoard logging automatically."
-  },
-  {
-    "objectID": "index.html#reward-function",
-    "href": "index.html#reward-function",
-    "title": "Self Landing Rocket Using Reinforcement Learning",
-    "section": "Reward Function",
-    "text": "Reward Function\nReward shaping is central to the project. Rather than offering a sparse signal only at episode end, the agent receives continuous feedback every step — penalized for tilting, drifting off-center, and moving too fast. A large terminal bonus or penalty is applied on ground contact based on landing quality.\n# Step reward — computed each timestep during flight\nreward = 0.0\n\n# Penalize tilt — encourages staying upright\nreward -= 0.1 * abs(angle)\n\n# Penalize speed — encourages slow, controlled descent\nreward -= 0.3 * (abs(vx) + abs(vy))\n\n# Penalize horizontal offset — encourages centering over the pad\nreward -= 0.2 * abs(x)\n\n# Time penalty — encourages efficient landings\nreward -= 0.05\n\n# Terminal reward — applied on ground contact\nif y &lt;= 0.0:\n    soft_landing = (\n        abs(x) &lt; 0.1       # centered on pad\n        and abs(vx) &lt; 0.1  # low lateral speed\n        and abs(vy) &lt; 0.2  # low vertical speed\n        and abs(angle) &lt; 0.1  # nearly upright\n    )\n    reward += 100.0 if soft_landing else -100.0"
+    "text": "Motivation\nReinforcement learning treats landing as a sequential decision problem. The agent observes the rocket’s full state, takes discrete thrust actions, and receives shaped rewards encouraging stability, fuel-aware control, and precise touchdown. Over many episodes, it learns a control policy purely from reward feedback.\nThe project is built around four core design elements:\n\nA 7-dimensional continuous state space capturing position, velocity, angle, angular velocity, and remaining fuel\n\nA shaped reward function with dense mid-air penalties and tiered landing bonuses\n\nDistributed RLlib training pipelines for both DQN and PPO\n\nA discrete thruster-based action space reflecting realistic actuation choices\n\nBy combining structured reward shaping with modern deep RL algorithms, the agent learns coordinated behaviors such as stabilizing orientation early, correcting horizontal drift during descent, and reducing velocity near the ground before committing to landing."
   },
   {
     "objectID": "index.html#github-repository",
@@ -91,17 +70,66 @@
     "text": "GitHub Repository\nThe GitHub repository hosting all code for this project can be found here."
   },
   {
-    "objectID": "methods.html#deep-q-learning-netowrks-dqn",
-    "href": "methods.html#deep-q-learning-netowrks-dqn",
+    "objectID": "methods.html",
+    "href": "methods.html",
     "title": "Methods",
-    "section": "Deep Q-Learning Netowrks (DQN)",
-    "text": "Deep Q-Learning Netowrks (DQN)"
+    "section": "",
+    "text": "The environment is a custom Gymnasium implementation simulating 2D rigid-body rocket dynamics with fuel constraints and rotational control. At each timestep, the agent observes a 7-dimensional continuous state vector and selects one of four discrete thrust actions. An episode terminates if the rocket lands, crashes, or exits the horizontal boundary.\nThe environment follows the Gymnasium API and supports both human rendering via PyGame and RGB array output for video generation.\n\n\n\nThe simulation uses simplified 2D rigid-body dynamics with the following constants:\n\nGravity: -0.05\nMain engine thrust: 0.20\nAngular thrust: 0.05\nAngular damping: 0.99 multiplier per step\nTimestep: dt = 0.05\nHorizontal boundary: |x| ≤ 1.5\nVertical ceiling: y ≤ 1.95\n\n\n\nAt each step:\n\nGravity continuously accelerates the rocket downward.\nThe main engine applies thrust along the rocket’s longitudinal axis.\nRotation actions apply angular thrust, modifying angular velocity.\nAngular velocity is slightly damped each step for stability.\nPosition and angle are integrated forward using simple Euler updates.\nFuel decreases by 0.01 per main engine burn and is bounded to [0, 1].\n\nThe rocket’s angle is wrapped to [-π, π] to maintain numerical stability.\n\n\n\n\n\nThe observation vector consists of seven variables:\n\n\n\nVariable\nDescription\nRange\n\n\n\n\nx\nHorizontal position\n[-1.5, 1.5]\n\n\ny\nVertical position\n[-1.95, 1.95]\n\n\nvx\nHorizontal velocity\n[-2.0, 2.0]\n\n\nvy\nVertical velocity\n[-2.0, 2.0]\n\n\nθ\nAngle from vertical\n[-π, π]\n\n\nω\nAngular velocity\n[-2.0, 2.0]\n\n\nfuel\nRemaining fuel fraction\n[0.0, 1.0]\n\n\n\nInitial conditions are randomized at reset:\n\nx ∈ [-0.5, 0.5]\ny ∈ [0.8, 1.2]\nθ ∈ [-0.3, 0.3]\nVelocities initialized to zero\nfuel = 1.0\n\nThis randomization ensures the agent must generalize across multiple initial configurations.\n\n\n\n\nThe agent selects one of four discrete actions:\n\n\n\nAction ID\nDescription\nEffect\n\n\n\n\n0\nNo-op\nFreefall\n\n\n1\nRotate left\nIncrease angular velocity\n\n\n2\nMain engine\nApply thrust along rocket axis and consume fuel\n\n\n3\nRotate right\nDecrease angular velocity\n\n\n\nRotation affects angular velocity directly. The main engine modifies both horizontal and vertical velocity components based on the current rocket angle."
   },
   {
-    "objectID": "methods.html#proximal-policyoptimization-ppo",
-    "href": "methods.html#proximal-policyoptimization-ppo",
+    "objectID": "methods.html#physics-model",
+    "href": "methods.html#physics-model",
     "title": "Methods",
-    "section": "Proximal PolicyOptimization (PPO)",
-    "text": "Proximal PolicyOptimization (PPO)"
+    "section": "",
+    "text": "The simulation uses simplified 2D rigid-body dynamics with the following constants:\n\nGravity: -0.05\nMain engine thrust: 0.20\nAngular thrust: 0.05\nAngular damping: 0.99 multiplier per step\nTimestep: dt = 0.05\nHorizontal boundary: |x| ≤ 1.5\nVertical ceiling: y ≤ 1.95\n\n\n\nAt each step:\n\nGravity continuously accelerates the rocket downward.\nThe main engine applies thrust along the rocket’s longitudinal axis.\nRotation actions apply angular thrust, modifying angular velocity.\nAngular velocity is slightly damped each step for stability.\nPosition and angle are integrated forward using simple Euler updates.\nFuel decreases by 0.01 per main engine burn and is bounded to [0, 1].\n\nThe rocket’s angle is wrapped to [-π, π] to maintain numerical stability."
+  },
+  {
+    "objectID": "methods.html#state-space-continuous",
+    "href": "methods.html#state-space-continuous",
+    "title": "Methods",
+    "section": "",
+    "text": "The observation vector consists of seven variables:\n\n\n\nVariable\nDescription\nRange\n\n\n\n\nx\nHorizontal position\n[-1.5, 1.5]\n\n\ny\nVertical position\n[-1.95, 1.95]\n\n\nvx\nHorizontal velocity\n[-2.0, 2.0]\n\n\nvy\nVertical velocity\n[-2.0, 2.0]\n\n\nθ\nAngle from vertical\n[-π, π]\n\n\nω\nAngular velocity\n[-2.0, 2.0]\n\n\nfuel\nRemaining fuel fraction\n[0.0, 1.0]\n\n\n\nInitial conditions are randomized at reset:\n\nx ∈ [-0.5, 0.5]\ny ∈ [0.8, 1.2]\nθ ∈ [-0.3, 0.3]\nVelocities initialized to zero\nfuel = 1.0\n\nThis randomization ensures the agent must generalize across multiple initial configurations."
+  },
+  {
+    "objectID": "methods.html#action-space-discrete",
+    "href": "methods.html#action-space-discrete",
+    "title": "Methods",
+    "section": "",
+    "text": "The agent selects one of four discrete actions:\n\n\n\nAction ID\nDescription\nEffect\n\n\n\n\n0\nNo-op\nFreefall\n\n\n1\nRotate left\nIncrease angular velocity\n\n\n2\nMain engine\nApply thrust along rocket axis and consume fuel\n\n\n3\nRotate right\nDecrease angular velocity\n\n\n\nRotation affects angular velocity directly. The main engine modifies both horizontal and vertical velocity components based on the current rocket angle."
+  },
+  {
+    "objectID": "methods.html#per-step-reward-components",
+    "href": "methods.html#per-step-reward-components",
+    "title": "Methods",
+    "section": "Per-Step Reward Components",
+    "text": "Per-Step Reward Components\nAt every timestep:\n\nPenalize tilt using squared angle:\n\n-0.15 * angle^2\n\nPenalize angular velocity:\n\n-0.05 * |ω|\n\nPenalize horizontal drift:\n\n-0.3 * |x|\n\nPenalize overall speed using squared velocity:\n\n-0.2 * (vx^2 + vy^2)\n\nEncourage descent:\n\n+0.1 * (1.0 - y)\n\nApply small survival penalty:\n\n-0.05"
+  },
+  {
+    "objectID": "methods.html#near-ground-shaping-y-0.3",
+    "href": "methods.html#near-ground-shaping-y-0.3",
+    "title": "Methods",
+    "section": "Near-Ground Shaping (y < 0.3)",
+    "text": "Near-Ground Shaping (y &lt; 0.3)\nAdditional shaping encourages precise landings:\n\nReward slow vertical speed\nReward low horizontal velocity\nReward upright orientation\n\nThis creates a structured learning signal that transitions from general stabilization mid-air to precision control near the landing pad."
+  },
+  {
+    "objectID": "methods.html#terminal-conditions",
+    "href": "methods.html#terminal-conditions",
+    "title": "Methods",
+    "section": "Terminal Conditions",
+    "text": "Terminal Conditions\nAn episode terminates if:\n\nThe rocket exits horizontal bounds (|x| &gt; 1.5)\n\nReward: -50\n\nThe rocket contacts the ground (y ≤ 0)\n\nLanding outcomes:\n\nSoft landing\n\n|x| &lt; 0.1\n|vx| &lt; 0.1\n|vy| &lt; 0.2\n|angle| &lt; 0.1\nReward: +200\n\nNear landing\n\nRelaxed thresholds\nReward: +75\n\nCrash\n\nReward: -100\n\n\nThis tiered reward structure improves learning stability compared to purely binary success signals."
+  },
+  {
+    "objectID": "methods.html#deep-q-network-dqn",
+    "href": "methods.html#deep-q-network-dqn",
+    "title": "Methods",
+    "section": "Deep Q-Network (DQN)",
+    "text": "Deep Q-Network (DQN)\nType: Off-policy, value-based\n\nArchitecture and Features\n\nDouble Q-learning\nDueling network architecture\nExperience replay buffer (capacity 50,000)\nTarget network updates every 500 steps\n\n\n\nKey Hyperparameters\n\ngamma = 0.99\nlr = 1e-3\ntrain_batch_size = 3000\n6 environment runners × 4 environments each\n\n\n\nStopping Criteria\nTraining stops at:\n\n150 iterations, or\nMean episode return ≥ 150\n\nThe best-performing checkpoint (based on episode return) is automatically saved and exported for evaluation and visualization."
+  },
+  {
+    "objectID": "methods.html#proximal-policy-optimization-ppo",
+    "href": "methods.html#proximal-policy-optimization-ppo",
+    "title": "Methods",
+    "section": "Proximal Policy Optimization (PPO)",
+    "text": "Proximal Policy Optimization (PPO)\nType: On-policy, policy-gradient\n\nArchitecture and Features\n\nClipped objective (clip_param = 0.2)\nGeneralized Advantage Estimation\nEntropy regularization (entropy_coeff = 0.01)\nValue loss coefficient (vf_loss_coeff = 0.5)\n\n\n\nKey Hyperparameters\n\ngamma = 0.99\nlr = 1e-4\ntrain_batch_size = 6000\nminibatch_size = 128\nnum_epochs = 10\n8 environment runners × 4 environments each\n\n\n\nStopping Criteria\nTraining stops at:\n\n200 iterations, or\nMean episode return ≥ 175\n\nAs with DQN, the best checkpoint is automatically selected and exported."
   }
 ]

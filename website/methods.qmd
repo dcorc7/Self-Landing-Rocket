@@ -2,13 +2,229 @@
 title: Methods
 ---
 
+# Environment Details
+
+The environment is a custom Gymnasium implementation simulating 2D rigid-body rocket dynamics with fuel constraints and rotational control. At each timestep, the agent observes a 7-dimensional continuous state vector and selects one of four discrete thrust actions. An episode terminates if the rocket lands, crashes, or exits the horizontal boundary.
+
+The environment follows the Gymnasium API and supports both human rendering via PyGame and RGB array output for video generation.
 
 ---
 
-## Deep Q-Learning Netowrks (DQN)
+## Physics Model
 
+The simulation uses simplified 2D rigid-body dynamics with the following constants:
 
+- Gravity: `-0.05`
+- Main engine thrust: `0.20`
+- Angular thrust: `0.05`
+- Angular damping: `0.99` multiplier per step
+- Timestep: `dt = 0.05`
+- Horizontal boundary: `|x| ≤ 1.5`
+- Vertical ceiling: `y ≤ 1.95`
+
+### Dynamics
+
+At each step:
+
+- Gravity continuously accelerates the rocket downward.
+- The main engine applies thrust along the rocket’s longitudinal axis.
+- Rotation actions apply angular thrust, modifying angular velocity.
+- Angular velocity is slightly damped each step for stability.
+- Position and angle are integrated forward using simple Euler updates.
+- Fuel decreases by `0.01` per main engine burn and is bounded to `[0, 1]`.
+
+The rocket’s angle is wrapped to `[-π, π]` to maintain numerical stability.
 
 ---
 
-## Proximal PolicyOptimization (PPO)
+## State Space (Continuous)
+
+The observation vector consists of seven variables:
+
+| Variable | Description | Range |
+|-----------|-------------|--------|
+| `x` | Horizontal position | [-1.5, 1.5] |
+| `y` | Vertical position | [-1.95, 1.95] |
+| `vx` | Horizontal velocity | [-2.0, 2.0] |
+| `vy` | Vertical velocity | [-2.0, 2.0] |
+| `θ` | Angle from vertical | [-π, π] |
+| `ω` | Angular velocity | [-2.0, 2.0] |
+| `fuel` | Remaining fuel fraction | [0.0, 1.0] |
+
+Initial conditions are randomized at reset:
+
+- `x ∈ [-0.5, 0.5]`
+- `y ∈ [0.8, 1.2]`
+- `θ ∈ [-0.3, 0.3]`
+- Velocities initialized to zero
+- `fuel = 1.0`
+
+This randomization ensures the agent must generalize across multiple initial configurations.
+
+---
+
+## Action Space (Discrete)
+
+The agent selects one of four discrete actions:
+
+| Action ID | Description | Effect |
+|-----------|-------------|--------|
+| 0 | No-op | Freefall |
+| 1 | Rotate left | Increase angular velocity |
+| 2 | Main engine | Apply thrust along rocket axis and consume fuel |
+| 3 | Rotate right | Decrease angular velocity |
+
+Rotation affects angular velocity directly. The main engine modifies both horizontal and vertical velocity components based on the current rocket angle.
+
+---
+
+# Reward Function
+
+The reward function combines dense shaping with structured terminal bonuses to encourage stable, controlled descent.
+
+## Per-Step Reward Components
+
+At every timestep:
+
+- Penalize tilt using squared angle:
+  - `-0.15 * angle^2`
+- Penalize angular velocity:
+  - `-0.05 * |ω|`
+- Penalize horizontal drift:
+  - `-0.3 * |x|`
+- Penalize overall speed using squared velocity:
+  - `-0.2 * (vx^2 + vy^2)`
+- Encourage descent:
+  - `+0.1 * (1.0 - y)`
+- Apply small survival penalty:
+  - `-0.05`
+
+## Near-Ground Shaping (y < 0.3)
+
+Additional shaping encourages precise landings:
+
+- Reward slow vertical speed
+- Reward low horizontal velocity
+- Reward upright orientation
+
+This creates a structured learning signal that transitions from general stabilization mid-air to precision control near the landing pad.
+
+## Terminal Conditions
+
+An episode terminates if:
+
+1. The rocket exits horizontal bounds (`|x| > 1.5`)
+   - Reward: `-50`
+
+2. The rocket contacts the ground (`y ≤ 0`)
+
+Landing outcomes:
+
+- **Soft landing**
+  - `|x| < 0.1`
+  - `|vx| < 0.1`
+  - `|vy| < 0.2`
+  - `|angle| < 0.1`
+  - Reward: `+200`
+
+- **Near landing**
+  - Relaxed thresholds
+  - Reward: `+75`
+
+- **Crash**
+  - Reward: `-100`
+
+This tiered reward structure improves learning stability compared to purely binary success signals.
+
+---
+
+# Algorithms
+
+Training uses Ray RLlib with the PyTorch backend. The environment is registered as `"RocketLanding-v0"` and trained using distributed environment runners.
+
+All experiments log:
+
+- Mean episode return
+- Mean episode length
+- Periodic checkpoints
+- Best checkpoint based on mean episode return
+
+Training curves are generated automatically after tuning completes.
+
+---
+
+## Deep Q-Network (DQN)
+
+**Type:** Off-policy, value-based
+
+### Architecture and Features
+
+- Double Q-learning
+- Dueling network architecture
+- Experience replay buffer (capacity 50,000)
+- Target network updates every 500 steps
+
+### Key Hyperparameters
+
+- `gamma = 0.99`
+- `lr = 1e-3`
+- `train_batch_size = 3000`
+- 6 environment runners × 4 environments each
+
+### Stopping Criteria
+
+Training stops at:
+
+- 150 iterations, or
+- Mean episode return ≥ 150
+
+The best-performing checkpoint (based on episode return) is automatically saved and exported for evaluation and visualization.
+
+---
+
+## Proximal Policy Optimization (PPO)
+
+**Type:** On-policy, policy-gradient
+
+### Architecture and Features
+
+- Clipped objective (`clip_param = 0.2`)
+- Generalized Advantage Estimation
+- Entropy regularization (`entropy_coeff = 0.01`)
+- Value loss coefficient (`vf_loss_coeff = 0.5`)
+
+### Key Hyperparameters
+
+- `gamma = 0.99`
+- `lr = 1e-4`
+- `train_batch_size = 6000`
+- `minibatch_size = 128`
+- `num_epochs = 10`
+- 8 environment runners × 4 environments each
+
+### Stopping Criteria
+
+Training stops at:
+
+- 200 iterations, or
+- Mean episode return ≥ 175
+
+As with DQN, the best checkpoint is automatically selected and exported.
+
+---
+
+# Training Infrastructure
+
+Both algorithms use Ray Tune for:
+
+- Distributed rollout collection
+- Periodic checkpointing
+- Automatic metric tracking
+- Best model selection
+
+After training:
+
+- Episode return and episode length curves are saved as PNG files.
+- The highest-performing policy checkpoint is copied into a dedicated `policies/` directory for deployment and visualization.
+
+This pipeline ensures reproducibility, scalability, and clean separation between environment logic, training configuration, and evaluation artifacts.

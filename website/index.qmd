@@ -4,109 +4,24 @@ title: Self Landing Rocket Using Reinforcement Learning
 
 ## Introduction
 
-Autonomous rocket landing is one of the most demanding control problems in aerospace engineering. A rocket returning from flight must simultaneously manage its altitude, horizontal drift, orientation, and velocity, all in real time and under the unforgiving influence of gravity. SpaceX's Falcon 9 demonstrated this is physically achievable; this project asks whether reinforcement learning can discover those same control strategies from scratch, through trial and error alone.
+Rocket landing is a challenging nonlinear control problem. A vehicle descending under gravity must regulate position, velocity, and orientation simultaneously, while operating under actuator and fuel constraints. Small control errors compound quickly, making a stable touchdown difficult without precise feedback and coordination.
 
-Built around a custom 2D physics simulation using Gymnasium and rendered with PyGame, this project trains deep RL agents to execute soft landings on a designated pad. Training is powered by Ray RLlib, which provides scalable, distributed learning across both DQN and PPO algorithms. The result is an agent that learns — without human demonstration or hardcoded logic — to fire its engines at precisely the right moments to touch down safely.
+This project explores whether reinforcement learning can learn that control strategy directly from interaction with a simulated environment. Using a custom 2D physics engine built with Gymnasium and rendered in PyGame, agents are trained to land a rocket upright and within a defined pad region. Training is performed with Ray RLlib using both DQN and PPO. The learned policies discover when to rotate, when to fire the main engine, and how to reduce velocity for a controlled landing without any hardcoded landing logic.
 
 ---
 
 ## Motivation
 
-Classical control methods like PID controllers or model predictive control require careful hand-tuning and rely on accurate physical models. Reinforcement learning offers a different path: given only a reward signal defining what a "good" landing looks like, an agent can discover effective strategies autonomously — and potentially generalize to conditions a human designer never anticipated.
+Reinforcement learning treats landing as a sequential decision problem. The agent observes the rocket’s full state, takes discrete thrust actions, and receives shaped rewards encouraging stability, fuel-aware control, and precise touchdown. Over many episodes, it learns a control policy purely from reward feedback.
 
-To achieve this, the project was built around four core design decisions:
+The project is built around four core design elements:
 
-- A 6-dimensional continuous state space capturing position, velocity, angle, and angular velocity
-- A shaped reward function that continuously penalizes instability and rewards controlled descent
-- RLlib-based training using DQN and PPO, enabling fast iteration with production-grade algorithms
-- A discrete action space (no-op, rotate left, main engine, rotate right) mirroring real thruster control logic
+- A 7-dimensional continuous state space capturing position, velocity, angle, angular velocity, and remaining fuel  
+- A shaped reward function with dense mid-air penalties and tiered landing bonuses  
+- Distributed RLlib training pipelines for both DQN and PPO  
+- A discrete thruster-based action space reflecting realistic actuation choices  
 
-By shaping rewards around stability and precision rather than mere survival, the agent learns behaviors that resemble genuine flight discipline — staying upright, decelerating before contact, and homing in on the landing pad.
-
----
-
-## Environment Details
-
-The environment is a custom Gymnasium implementation simulating 2D rigid-body rocket dynamics. At each timestep, the agent observes a 6-variable state vector and selects one of four discrete thrust actions. An episode ends when the rocket contacts the ground — either in a successful soft landing or a crash.
-
-### State Space (Continuous)
-
-| Variable | Description | Range |
-|----------|-------------|-------|
-| `x` | Horizontal position (normalized) | [-1.0, 1.0] |
-| `y` | Vertical position (normalized) | [0.0, 1.2] |
-| `vx` | Horizontal velocity | [-2.0, 2.0] |
-| `vy` | Vertical velocity | [-2.0, 2.0] |
-| `θ` | Angle from vertical | [-π, π] radians |
-| `ω` | Angular velocity | [-2.0, 2.0] rad/s |
-
-### Action Space (Discrete)
-
-| Action ID | Description | Effect |
-|-----------|-------------|--------|
-| 0 | No-op | Coast/freefall |
-| 1 | Rotate left | Apply counterclockwise torque |
-| 2 | Main engine | Fire thruster along rocket axis |
-| 3 | Rotate right | Apply clockwise torque |
-
-### Physics
-
-The simulation uses simplified 2D rigid-body dynamics: constant downward gravity, main thrust applied along the rocket's longitudinal axis, and angular torque for rotation control. Position and velocity are integrated each step, with the arena bounded horizontally to [-1.0, 1.0] and vertically to [0.0, 1.2].
-
----
-
-## Algorithms
-
-Training uses **Ray RLlib** — an industry-standard distributed RL library — to run two complementary algorithms. Both are applied to the same environment, enabling direct comparison of value-based versus policy-based approaches on this control task.
-
-### DQN (Deep Q-Network)
-
-- **Type**: Value-based, off-policy
-- **How it works**: Learns a Q-function estimating expected future reward for each action, then selects the action with the highest Q-value
-- **Key features**: Experience replay for sample efficiency, target network for training stability, Double Q-learning and dueling architecture via RLlib
-- **Best for**: Discrete action spaces where sample efficiency matters
-
-### PPO (Proximal Policy Optimization)
-
-- **Type**: Policy-based, on-policy
-- **How it works**: Directly optimizes the policy using a clipped surrogate objective that prevents destructively large updates
-- **Key features**: Generalized Advantage Estimation (GAE), multiple parallel workers for on-policy sampling, automatic learning rate tuning
-- **Best for**: Stable training with minimal hyperparameter sensitivity
-
-Both algorithms are run through RLlib's distributed infrastructure, which handles parallel environment sampling, checkpointing, and TensorBoard logging automatically.
-
----
-
-## Reward Function
-
-Reward shaping is central to the project. Rather than offering a sparse signal only at episode end, the agent receives continuous feedback every step — penalized for tilting, drifting off-center, and moving too fast. A large terminal bonus or penalty is applied on ground contact based on landing quality.
-
-```python
-# Step reward — computed each timestep during flight
-reward = 0.0
-
-# Penalize tilt — encourages staying upright
-reward -= 0.1 * abs(angle)
-
-# Penalize speed — encourages slow, controlled descent
-reward -= 0.3 * (abs(vx) + abs(vy))
-
-# Penalize horizontal offset — encourages centering over the pad
-reward -= 0.2 * abs(x)
-
-# Time penalty — encourages efficient landings
-reward -= 0.05
-
-# Terminal reward — applied on ground contact
-if y <= 0.0:
-    soft_landing = (
-        abs(x) < 0.1       # centered on pad
-        and abs(vx) < 0.1  # low lateral speed
-        and abs(vy) < 0.2  # low vertical speed
-        and abs(angle) < 0.1  # nearly upright
-    )
-    reward += 100.0 if soft_landing else -100.0
-```
+By combining structured reward shaping with modern deep RL algorithms, the agent learns coordinated behaviors such as stabilizing orientation early, correcting horizontal drift during descent, and reducing velocity near the ground before committing to landing.
 
 ---
 

@@ -2,10 +2,24 @@
 title: Results
 ---
 
+This section compares three control strategies in the custom rocket landing environment: a random policy baseline, Deep Q-Learning (DQN), and Proximal Policy Optimization (PPO). All agents were trained using Ray RLlib under identical environment dynamics and reward structure, allowing for direct behavioral and learning-curve comparisons.
+
+---
+
 ## Random Policy
 
 ![Random Gif](./gifs/random.gif){width=75%}
 
+The random policy selects one of the four discrete actions uniformly at random at every timestep. It provides a baseline for evaluating whether learned behavior is meaningfully better than chance.
+
+### Observations
+
+- The rocket frequently tumbles due to uncoordinated rotation actions.
+- Thrust is applied inconsistently, often increasing instability rather than correcting it.
+- Landings are almost always crashes, typically at high velocity or extreme angles.
+- Episode rewards remain strongly negative due to cumulative tilt, velocity, and terminal crash penalties.
+
+This confirms that the environment is non-trivial. Stable landings require coordinated control over both translation and rotation, which random exploration alone cannot achieve.
 
 ---
 
@@ -13,37 +27,113 @@ title: Results
 
 ![DQN Gif](./gifs/rllib_dqn_best.gif){width=75%}
 
-
 ![DQN Training Curves](./assets/dqn_training_curves.png){width=90%}
+
+DQN learns an action-value function mapping each state to expected future reward for each discrete action. Through experience replay and target network stabilization, it gradually improves control behavior over training iterations.
+
+### Behavioral Results
+
+- The agent learns to remain more upright during descent.
+- Thruster firing becomes more purposeful, typically used to counteract excessive downward velocity.
+- Horizontal drift is partially corrected, though not always precisely.
+- Successful soft landings emerge after sufficient training, though with occasional instability.
+
+DQN demonstrates that value-based methods can solve this control problem despite the continuous state space. However, learned policies sometimes appear reactive rather than anticipatory, especially under higher angular momentum.
+
+### Training Dynamics
+
+The DQN training curves show:
+
+- Mean episode reward steadily increases over time.
+- Early training is highly volatile due to exploratory behavior.
+- As epsilon decays and Q-values stabilize, variance decreases.
+- Convergence occurs once the agent reliably achieves soft landings in a majority of episodes.
+
+The learning curve reflects the typical DQN pattern: unstable early exploration followed by gradual policy refinement as replay memory accumulates diverse experiences.
 
 ---
 
 ## Proximal Policy Optimization (PPO)
 
-
 ![PPO Gif](./gifs/rllib_ppo_best.gif){width=75%}
 
-
-
 ![PPO Training Curves](./assets/ppo_training_curves.png){width=90%}
+
+PPO directly optimizes the policy using clipped gradient updates, improving stability compared to unconstrained policy gradient methods. Because it is on-policy, it relies on fresh trajectory rollouts collected each iteration.
+
+### Behavioral Results
+
+- The rocket maintains near-vertical orientation throughout descent.
+- Engine burns are smoother and more anticipatory than DQN.
+- Horizontal corrections are applied earlier and more consistently.
+- Soft landings are more repeatable and visually controlled.
+
+Compared to DQN, PPO produces smoother control trajectories. The descent often resembles a disciplined landing sequence: stabilize orientation, reduce vertical speed, correct lateral offset, and gently settle onto the pad.
+
+### Training Dynamics
+
+The PPO training curves show:
+
+- Faster reward growth during early training.
+- Lower variance between iterations compared to DQN.
+- More stable convergence once landing strategies are discovered.
+- Consistent high rewards once the agent internalizes the shaped reward structure.
+
+Because PPO updates the policy directly while constraining step size, it tends to avoid the oscillatory value overestimation sometimes observed in Q-learning.
+
+---
+
+# Comparative Analysis
+
+| Metric | Random | DQN | PPO |
+|--------|--------|------|------|
+| Stable Orientation | Rare | Often | Consistently |
+| Horizontal Correction | None | Partial | Strong |
+| Soft Landing Frequency | ~0% | Moderate | High |
+| Training Stability | N/A | Moderate | High |
+
+Both DQN and PPO successfully learn to land the rocket, demonstrating that reinforcement learning can discover complex control strategies without explicit programming.
+
+However, qualitative differences emerge:
+
+- **DQN** is sample-efficient and effective for discrete action spaces but can exhibit reactive corrections and higher training variance.
+- **PPO** produces smoother trajectories and more stable learning, likely due to its direct policy optimization and clipped objective.
 
 ---
 
 # Conclusion & Future Work
 
+This project demonstrates that deep reinforcement learning can autonomously learn stable rocket landing behavior from scratch within a simplified 2D physics simulation. Both value-based and policy-based methods achieve soft landings, validating the effectiveness of shaped reward design and distributed RLlib training.
 
+The results highlight three key insights:
+
+1. Reward shaping strongly influences flight discipline.
+2. Policy-based methods can yield smoother control in continuous-state dynamics.
+3. Stable learning emerges from combining structured rewards with modern RL algorithms.
 
 ---
 
 ## Limitations
 
+Despite successful learning, several limitations remain:
 
+- The simulation is simplified to 2D and omits aerodynamic drag and stochastic disturbances.
+- The action space is discrete rather than continuous thrust modulation.
+- Generalization to unseen initial conditions was not extensively evaluated.
+- Reward shaping may bias the agent toward specific landing styles rather than optimal fuel efficiency.
+
+Additionally, performance is sensitive to hyperparameters such as learning rate, exploration schedule, and reward scaling.
 
 ---
 
 ## Future Directions
 
+Several extensions could further strengthen the project:
 
+- Transition to a continuous action space using algorithms such as SAC or TD3.
+- Introduce wind disturbances or randomized initial conditions to test robustness.
+- Add fuel consumption penalties to encourage energy-efficient landings.
+- Extend the environment to 3D dynamics.
+- Incorporate curriculum learning to gradually increase task difficulty.
 
----
-
+This project provides a foundation for exploring more realistic autonomous control problems and demonstrates how reinforcement learning can approximate sophisticated aerospace maneuvers through trial-and-error optimization alone.
